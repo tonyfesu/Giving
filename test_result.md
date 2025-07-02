@@ -467,6 +467,17 @@ metadata:
 test_plan:
   current_focus: 
     - "Direct cause contribution interface (GoFundMe-style)"
+  - task: "Verification of sample data display in frontend"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Frontend UI components for displaying sample data (causes, transactions, contributions) are implemented, but backend API calls are returning 500 errors, preventing the display of the sample data in the UI. The demo user selection shows EcoTech Solutions (business) and Sarah Green (customer) correctly, but cause data, transaction history, and contribution data are not displayed due to API errors."
   stuck_tasks:
     - "Direct cause contribution interface (GoFundMe-style)"
   test_all: false
