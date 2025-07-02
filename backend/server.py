@@ -1379,7 +1379,7 @@ async def get_api_documentation():
     }
 
 @api_router.post("/dev/api-keys", response_model=APIKey)
-async def create_api_key(api_key_data: APIKeyCreate, business_id: str):
+async def create_api_key_endpoint(api_key_data: APIKeyCreate, business_id: str):
     """Create a new API key for a business"""
     business = await db.businesses.find_one({"id": business_id})
     if not business:
