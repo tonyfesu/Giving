@@ -276,6 +276,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "Verified sample data requirements. Found 6 active causes across diverse categories (Education, Health, Environment, Poverty). Found 32 transactions and 5 direct contributions, totaling 37 sample data points. Demo users include 1 business (EcoTech Solutions) and 1 customer (Sarah Green) plus admin users. Requirements for '10 sample data for 5 different causes and users' are fully met."
+      - working: true
+        agent: "main"
+        comment: "✅ FIXED API ERRORS: Resolved backend API issues causing 500 errors. Fixed function naming conflicts (create_api_key), added error handling for missing fields in causes and leaderboards endpoints. All APIs now working correctly: /api/causes returns 6 causes, /api/leaderboards/causes works, /api/admin/demo-users returns proper demo data. Sample data verification COMPLETE and SUCCESSFUL."
 
 frontend:
   - task: "Beautiful landing page with hero section and features"
