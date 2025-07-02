@@ -166,9 +166,11 @@ def verify_transactions():
             print(f"{i}. Amount: ${txn['amount']}, Impact: ${txn['total_impact_amount']}")
             print(f"   Customer: {txn['customer_name'] or 'Anonymous'}")
             print(f"   Date: {txn['timestamp']}")
-            print(f"   Impact breakdown: {len(txn['impact_breakdown'])} causes")
-            for cause_id, impact in txn['impact_breakdown'].items():
-                print(f"     - {impact['cause_name']}: ${impact['amount']} ({impact['impact_units']} {impact['impact_metric']})")
+            if 'impact_breakdown' in txn:
+                print(f"   Impact breakdown: {len(txn['impact_breakdown'])} causes")
+                for cause_id, impact in txn['impact_breakdown'].items():
+                    if isinstance(impact, dict) and 'cause_name' in impact:
+                        print(f"     - {impact['cause_name']}: ${impact['amount']} ({impact['impact_units']} {impact['impact_metric']})")
     
     return transactions
 
