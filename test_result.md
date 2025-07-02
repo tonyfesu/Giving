@@ -465,8 +465,10 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus: []
-  stuck_tasks: []
+  current_focus: 
+    - "Direct cause contribution interface (GoFundMe-style)"
+  stuck_tasks:
+    - "Direct cause contribution interface (GoFundMe-style)"
   test_all: false
   test_priority: "high_first"
 
