@@ -22,7 +22,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Create the main app without a prefix
-app = FastAPI(title="ImpactLink API", description="Social Impact Platform API", version="3.0")
+app = FastAPI(title="ImpactLink API", description="Social Impact Platform API", version="4.0")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -34,32 +34,55 @@ def create_api_key():
     """Generate a simple API key for demo purposes"""
     return f"il_{uuid.uuid4().hex[:24]}"
 
+def generate_account_number():
+    """Generate a unique account number"""
+    import random
+    return f"IL{random.randint(1000000000, 9999999999)}"
+
 # Enhanced Models
 class PaymentMethod(BaseModel):
     type: str  # "card", "momo", "papss", "bank_transfer"
     provider: str  # "visa", "mastercard", "mtn_momo", "vodacom", "papss", "bank"
     details: Dict[str, Any] = Field(default_factory=dict)  # Store payment-specific details
 
-class UserCausePreference(BaseModel):
+class SettlementInfo(BaseModel):
+    account_number: Optional[str] = None
+    phone_number: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_code: Optional[str] = None
+    account_type: str = "savings"  # savings, checking, momo
+    verified: bool = False
+
+class Subscription(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
     user_type: str  # "customer" or "business"
-    cause_id: str
-    priority: int = 1  # 1 = highest priority
-    notification_enabled: bool = True
-    monthly_target: Optional[float] = None
+    plan_type: str  # "monthly", "yearly", "premium"
+    amount: float
+    currency: str = "USD"
+    status: str = "active"  # active, paused, cancelled, expired
+    start_date: datetime = Field(default_factory=datetime.utcnow)
+    end_date: datetime
+    auto_renew: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SubscriptionCreate(BaseModel):
+    plan_type: str
+    auto_renew: bool = True
 
 class Customer(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     email: str
     phone: Optional[str] = None
+    account_number: str = Field(default_factory=generate_account_number)
     preferred_causes: List[str] = Field(default_factory=list)  # cause IDs
     payment_methods: List[PaymentMethod] = Field(default_factory=list)
+    settlement_info: Optional[SettlementInfo] = None
     total_contributions: float = 0.0
     contribution_count: int = 0
     badges: List[str] = Field(default_factory=list)
+    subscription: Optional[Subscription] = None
     notification_preferences: Dict[str, bool] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_contribution: Optional[datetime] = None
@@ -69,6 +92,7 @@ class CustomerCreate(BaseModel):
     email: str
     phone: Optional[str] = None
     preferred_causes: List[str] = Field(default_factory=list)
+    settlement_info: Optional[SettlementInfo] = None
 
 class Business(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -78,13 +102,16 @@ class Business(BaseModel):
     email: str
     phone: Optional[str] = None
     website: Optional[str] = None
+    account_number: str = Field(default_factory=generate_account_number)
     api_key: str = Field(default_factory=create_api_key)
     preferred_causes: List[str] = Field(default_factory=list)  # cause IDs they want to support
     impact_allocations: Dict[str, float] = Field(default_factory=dict)
+    settlement_info: Optional[SettlementInfo] = None
     total_sales: float = 0.0
     total_impact: float = 0.0
     transaction_count: int = 0
     badges: List[str] = Field(default_factory=list)
+    subscription: Optional[Subscription] = None
     verified: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -96,6 +123,7 @@ class BusinessCreate(BaseModel):
     phone: Optional[str] = None
     website: Optional[str] = None
     preferred_causes: List[str] = Field(default_factory=list)
+    settlement_info: Optional[SettlementInfo] = None
 
 class Cause(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -108,9 +136,17 @@ class Cause(BaseModel):
     total_raised: float = 0.0
     total_impact_units: float = 0.0
     goal_amount: Optional[float] = None
+    start_date: datetime = Field(default_factory=datetime.utcnow)
+    end_date: Optional[datetime] = None
+    creator_id: str  # ID of business or customer who created this cause
+    creator_type: str  # "business" or "customer"
+    creator_name: str
+    creator_website: Optional[str] = None
     active: bool = True
+    expired: bool = False
     featured: bool = False
     payment_methods_accepted: List[str] = Field(default_factory=lambda: ["card", "momo", "papss", "bank_transfer"])
+    volunteer_opportunities: List[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class CauseCreate(BaseModel):
@@ -121,7 +157,11 @@ class CauseCreate(BaseModel):
     impact_metric: str
     cost_per_impact: float
     goal_amount: Optional[float] = None
+    end_date: Optional[datetime] = None
+    creator_id: str
+    creator_type: str
     payment_methods_accepted: List[str] = Field(default_factory=lambda: ["card", "momo", "papss", "bank_transfer"])
+    volunteer_opportunities: List[str] = Field(default_factory=list)
 
 class Payment(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -145,6 +185,8 @@ class DirectContribution(BaseModel):
     message: Optional[str] = None
     anonymous: bool = False
     impact_units: float = 0.0
+    is_subscription: bool = False
+    subscription_id: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 class DirectContributionCreate(BaseModel):
@@ -206,6 +248,20 @@ class APIKeyCreate(BaseModel):
     description: str
     permissions: List[str] = Field(default_factory=list)
 
+# Subscription plans
+SUBSCRIPTION_PLANS = {
+    "individual": {
+        "monthly": {"price": 9.99, "features": ["unlimited_donations", "priority_support", "impact_reports"]},
+        "yearly": {"price": 99.99, "features": ["unlimited_donations", "priority_support", "impact_reports", "exclusive_causes"]},
+        "premium": {"price": 199.99, "features": ["all_features", "personal_cause_creation", "advanced_analytics"]}
+    },
+    "business": {
+        "monthly": {"price": 49.99, "features": ["api_access", "custom_branding", "analytics"]},
+        "yearly": {"price": 499.99, "features": ["api_access", "custom_branding", "analytics", "priority_processing"]},
+        "premium": {"price": 999.99, "features": ["all_features", "white_label", "dedicated_support"]}
+    }
+}
+
 # Payment Processing Functions
 async def process_payment(payment_method: PaymentMethod, amount: float, currency: str = "USD") -> Payment:
     """Simulate payment processing for different methods"""
@@ -219,34 +275,27 @@ async def process_payment(payment_method: PaymentMethod, amount: float, currency
     
     # Simulate payment processing based on method type
     if payment_method.type == "card":
-        # Simulate card processing
         payment.status = "completed" if amount <= 10000 else "failed"
         payment.gateway_response = {
             "processor": "stripe",
             "card_last4": payment_method.details.get("last4", "1234"),
             "card_brand": payment_method.details.get("brand", "visa")
         }
-    
     elif payment_method.type == "momo":
-        # Simulate mobile money processing
         payment.status = "completed"
         payment.gateway_response = {
             "processor": payment_method.provider,
             "phone": payment_method.details.get("phone", "+1234567890"),
             "reference": f"momo_{uuid.uuid4().hex[:8]}"
         }
-    
     elif payment_method.type == "papss":
-        # Simulate PAPSS processing
         payment.status = "completed"
         payment.gateway_response = {
             "processor": "papss",
             "bank_code": payment_method.details.get("bank_code", "001"),
             "reference": f"papss_{uuid.uuid4().hex[:8]}"
         }
-    
     elif payment_method.type == "bank_transfer":
-        # Simulate bank transfer
         payment.status = "completed"
         payment.gateway_response = {
             "processor": "bank",
@@ -258,6 +307,15 @@ async def process_payment(payment_method: PaymentMethod, amount: float, currency
         payment.completed_at = datetime.utcnow()
     
     return payment
+
+# Check if cause is expired
+async def check_cause_expiry():
+    """Check and mark expired causes"""
+    now = datetime.utcnow()
+    await db.causes.update_many(
+        {"end_date": {"$lt": now}, "expired": False},
+        {"$set": {"expired": True, "active": False}}
+    )
 
 # Badge definitions (enhanced)
 BADGES = {
@@ -299,6 +357,22 @@ BADGES = {
         description="Used multiple payment methods",
         icon="💳",
         criteria={"type": "payment_methods", "value": 2},
+        rarity="rare"
+    ),
+    "cause_creator": Badge(
+        id="cause_creator",
+        name="Cause Creator",
+        description="Created your first cause",
+        icon="🎯",
+        criteria={"type": "causes_created", "value": 1},
+        rarity="epic"
+    ),
+    "subscriber": Badge(
+        id="subscriber",
+        name="Subscriber",
+        description="Active platform subscriber",
+        icon="⭐",
+        criteria={"type": "subscription", "value": 1},
         rarity="rare"
     ),
     "business_pioneer": Badge(
@@ -347,9 +421,10 @@ async def check_and_award_badges(user_type: str, user_id: str, user_data: dict):
         elif criteria["type"] == "transaction_count":
             criteria_met = user_data.get("transaction_count", 0) >= criteria["value"]
         elif criteria["type"] == "payment_methods":
-            # Check how many different payment methods user has used
             payment_methods_count = len(user_data.get("payment_methods", []))
             criteria_met = payment_methods_count >= criteria["value"]
+        elif criteria["type"] == "subscription":
+            criteria_met = user_data.get("subscription") is not None
         
         if criteria_met:
             # Award badge
@@ -362,11 +437,70 @@ async def check_and_award_badges(user_type: str, user_id: str, user_data: dict):
     
     return awarded_badges
 
-# Initialize default data
+# Initialize default data with demo users
 async def init_default_data():
-    # Initialize causes with payment methods
+    # Check and mark expired causes
+    await check_cause_expiry()
+    
+    # Initialize causes with demo users as creators
     existing_causes = await db.causes.count_documents({})
     if existing_causes == 0:
+        # Create demo business first
+        demo_business_id = str(uuid.uuid4())
+        demo_business = {
+            "id": demo_business_id,
+            "name": "EcoTech Solutions",
+            "description": "Sustainable technology company committed to environmental impact",
+            "industry": "Technology",
+            "email": "demo@ecotech.com",
+            "phone": "+1-555-0100",
+            "website": "https://ecotech-demo.com",
+            "account_number": generate_account_number(),
+            "api_key": create_api_key(),
+            "preferred_causes": [],
+            "impact_allocations": {},
+            "settlement_info": {
+                "account_number": "1234567890",
+                "phone_number": "+1-555-0100",
+                "bank_name": "Demo Bank",
+                "bank_code": "DEMO001",
+                "account_type": "checking",
+                "verified": True
+            },
+            "total_sales": 15000.0,
+            "total_impact": 1500.0,
+            "transaction_count": 25,
+            "badges": ["business_pioneer"],
+            "verified": True,
+            "created_at": datetime.utcnow()
+        }
+        await db.businesses.insert_one(demo_business)
+        
+        # Create demo customer
+        demo_customer_id = str(uuid.uuid4())
+        demo_customer = {
+            "id": demo_customer_id,
+            "name": "Sarah Green",
+            "email": "sarah@demo.com",
+            "phone": "+1-555-0200",
+            "account_number": generate_account_number(),
+            "preferred_causes": [],
+            "payment_methods": [],
+            "settlement_info": {
+                "phone_number": "+1-555-0200",
+                "account_type": "momo",
+                "verified": True
+            },
+            "total_contributions": 750.0,
+            "contribution_count": 15,
+            "badges": ["first_contribution", "generous_giver"],
+            "notification_preferences": {},
+            "created_at": datetime.utcnow(),
+            "last_contribution": datetime.utcnow()
+        }
+        await db.customers.insert_one(demo_customer)
+        
+        # Default causes with demo creators
         default_causes = [
             {
                 "id": str(uuid.uuid4()),
@@ -376,12 +510,20 @@ async def init_default_data():
                 "image_url": "https://images.pexels.com/photos/2219024/pexels-photo-2219024.jpeg",
                 "impact_metric": "children educated for 1 month",
                 "cost_per_impact": 25.0,
-                "total_raised": 0.0,
-                "total_impact_units": 0.0,
+                "total_raised": 2500.0,
+                "total_impact_units": 100.0,
                 "goal_amount": 10000.0,
+                "start_date": datetime.utcnow(),
+                "end_date": datetime.utcnow() + timedelta(days=90),
+                "creator_id": demo_business_id,
+                "creator_type": "business",
+                "creator_name": "EcoTech Solutions",
+                "creator_website": "https://ecotech-demo.com",
                 "active": True,
+                "expired": False,
                 "featured": True,
                 "payment_methods_accepted": ["card", "momo", "papss", "bank_transfer"],
+                "volunteer_opportunities": ["tutoring", "curriculum_development"],
                 "created_at": datetime.utcnow()
             },
             {
@@ -392,12 +534,20 @@ async def init_default_data():
                 "image_url": "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b",
                 "impact_metric": "people with clean water access for 1 year",
                 "cost_per_impact": 50.0,
-                "total_raised": 0.0,
-                "total_impact_units": 0.0,
+                "total_raised": 1800.0,
+                "total_impact_units": 36.0,
                 "goal_amount": 25000.0,
+                "start_date": datetime.utcnow(),
+                "end_date": datetime.utcnow() + timedelta(days=180),
+                "creator_id": demo_customer_id,
+                "creator_type": "customer",
+                "creator_name": "Sarah Green",
+                "creator_website": None,
                 "active": True,
+                "expired": False,
                 "featured": True,
                 "payment_methods_accepted": ["card", "momo", "papss", "bank_transfer"],
+                "volunteer_opportunities": ["water_testing", "community_outreach"],
                 "created_at": datetime.utcnow()
             },
             {
@@ -407,12 +557,20 @@ async def init_default_data():
                 "category": "Environment",
                 "impact_metric": "trees planted",
                 "cost_per_impact": 2.0,
-                "total_raised": 0.0,
-                "total_impact_units": 0.0,
+                "total_raised": 500.0,
+                "total_impact_units": 250.0,
                 "goal_amount": 5000.0,
+                "start_date": datetime.utcnow(),
+                "end_date": datetime.utcnow() + timedelta(days=60),
+                "creator_id": demo_business_id,
+                "creator_type": "business",
+                "creator_name": "EcoTech Solutions",
+                "creator_website": "https://ecotech-demo.com",
                 "active": True,
+                "expired": False,
                 "featured": False,
                 "payment_methods_accepted": ["card", "momo", "papss"],
+                "volunteer_opportunities": ["tree_planting", "site_monitoring"],
                 "created_at": datetime.utcnow()
             },
             {
@@ -422,12 +580,20 @@ async def init_default_data():
                 "category": "Poverty",
                 "impact_metric": "meals provided",
                 "cost_per_impact": 3.0,
-                "total_raised": 0.0,
-                "total_impact_units": 0.0,
+                "total_raised": 900.0,
+                "total_impact_units": 300.0,
                 "goal_amount": 15000.0,
+                "start_date": datetime.utcnow(),
+                "end_date": datetime.utcnow() + timedelta(days=120),
+                "creator_id": demo_customer_id,
+                "creator_type": "customer",
+                "creator_name": "Sarah Green",
+                "creator_website": None,
                 "active": True,
+                "expired": False,
                 "featured": True,
                 "payment_methods_accepted": ["card", "momo", "bank_transfer"],
+                "volunteer_opportunities": ["meal_preparation", "delivery"],
                 "created_at": datetime.utcnow()
             },
             {
@@ -437,99 +603,148 @@ async def init_default_data():
                 "category": "Health",
                 "impact_metric": "therapy sessions provided",
                 "cost_per_impact": 75.0,
-                "total_raised": 0.0,
-                "total_impact_units": 0.0,
+                "total_raised": 3000.0,
+                "total_impact_units": 40.0,
                 "goal_amount": 20000.0,
+                "start_date": datetime.utcnow() - timedelta(days=10),
+                "end_date": datetime.utcnow() + timedelta(days=5),  # Expiring soon
+                "creator_id": demo_business_id,
+                "creator_type": "business",
+                "creator_name": "EcoTech Solutions",
+                "creator_website": "https://ecotech-demo.com",
                 "active": True,
+                "expired": False,
                 "featured": False,
                 "payment_methods_accepted": ["card", "papss", "bank_transfer"],
-                "created_at": datetime.utcnow()
+                "volunteer_opportunities": ["peer_support", "awareness_campaigns"],
+                "created_at": datetime.utcnow() - timedelta(days=10)
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Digital Literacy Program",
+                "description": "Teaching digital skills to underserved communities",
+                "category": "Education",
+                "impact_metric": "people trained",
+                "cost_per_impact": 30.0,
+                "total_raised": 600.0,
+                "total_impact_units": 20.0,
+                "goal_amount": 8000.0,
+                "start_date": datetime.utcnow() - timedelta(days=30),
+                "end_date": datetime.utcnow() - timedelta(days=1),  # Expired
+                "creator_id": demo_customer_id,
+                "creator_type": "customer",
+                "creator_name": "Sarah Green",
+                "creator_website": None,
+                "active": False,
+                "expired": True,
+                "featured": False,
+                "payment_methods_accepted": ["card", "momo"],
+                "volunteer_opportunities": ["teaching", "curriculum_design"],
+                "created_at": datetime.utcnow() - timedelta(days=30)
             }
         ]
         
         for cause in default_causes:
             await db.causes.insert_one(cause)
 
-    # Create default admin user
+    # Create default admin users
     existing_admin = await db.admin_users.count_documents({})
     if existing_admin == 0:
-        admin_user = {
-            "id": str(uuid.uuid4()),
-            "username": "admin",
-            "email": "admin@impactlink.com",
-            "role": "admin",
-            "created_at": datetime.utcnow()
-        }
-        await db.admin_users.insert_one(admin_user)
+        admin_users = [
+            {
+                "id": str(uuid.uuid4()),
+                "username": "admin",
+                "email": "admin@impactlink.com",
+                "role": "admin",
+                "created_at": datetime.utcnow()
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "username": "demo_admin",
+                "email": "demo.admin@impactlink.com",
+                "role": "admin",
+                "created_at": datetime.utcnow()
+            }
+        ]
+        for admin in admin_users:
+            await db.admin_users.insert_one(admin)
 
-# Customer endpoints (enhanced)
-@api_router.post("/customers", response_model=Customer)
-async def create_customer(customer: CustomerCreate):
-    # Check if email already exists
-    existing = await db.customers.find_one({"email": customer.email})
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+# Enhanced Cause endpoints
+@api_router.get("/causes", response_model=List[Cause])
+async def get_causes(
+    active_only: bool = True,
+    featured_only: bool = False,
+    payment_method: Optional[str] = None,
+    category: Optional[str] = None,
+    creator_type: Optional[str] = None,
+    expired: Optional[bool] = None,
+    sort_by: str = "created_at",  # created_at, total_raised, end_date
+    sort_order: str = "desc"  # asc, desc
+):
+    # Check and update expired causes
+    await check_cause_expiry()
     
-    customer_dict = customer.dict()
-    customer_obj = Customer(**customer_dict)
-    await db.customers.insert_one(customer_obj.dict())
-    return customer_obj
+    query = {}
+    if active_only and expired is None:
+        query["active"] = True
+    if featured_only:
+        query["featured"] = True
+    if payment_method:
+        query["payment_methods_accepted"] = payment_method
+    if category:
+        query["category"] = category
+    if creator_type:
+        query["creator_type"] = creator_type
+    if expired is not None:
+        query["expired"] = expired
+    
+    # Sorting
+    sort_direction = -1 if sort_order == "desc" else 1
+    
+    causes = await db.causes.find(query).sort(sort_by, sort_direction).to_list(1000)
+    return [Cause(**cause) for cause in causes]
 
-@api_router.get("/customers", response_model=List[Customer])
-async def get_customers():
-    customers = await db.customers.find().to_list(1000)
-    return [Customer(**customer) for customer in customers]
+@api_router.get("/causes/{cause_id}", response_model=Cause)
+async def get_cause(cause_id: str):
+    cause = await db.causes.find_one({"id": cause_id})
+    if not cause:
+        raise HTTPException(status_code=404, detail="Cause not found")
+    return Cause(**cause)
 
-@api_router.get("/customers/{customer_id}", response_model=Customer)
-async def get_customer(customer_id: str):
-    customer = await db.customers.find_one({"id": customer_id})
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    return Customer(**customer)
+@api_router.post("/causes", response_model=Cause)
+async def create_cause(cause: CauseCreate):
+    # Verify creator exists
+    creator_collection = db.businesses if cause.creator_type == "business" else db.customers
+    creator = await creator_collection.find_one({"id": cause.creator_id})
+    if not creator:
+        raise HTTPException(status_code=404, detail="Creator not found")
+    
+    cause_dict = cause.dict()
+    cause_dict["creator_name"] = creator["name"]
+    if cause.creator_type == "business" and creator.get("website"):
+        cause_dict["creator_website"] = creator["website"]
+    
+    cause_obj = Cause(**cause_dict)
+    await db.causes.insert_one(cause_obj.dict())
+    
+    # Award cause creator badge
+    await check_and_award_badges(cause.creator_type, cause.creator_id, creator)
+    
+    return cause_obj
 
-@api_router.put("/customers/{customer_id}/causes")
-async def update_customer_preferred_causes(customer_id: str, cause_ids: List[str]):
-    """Update customer's preferred causes"""
-    customer = await db.customers.find_one({"id": customer_id})
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    
-    # Validate that all cause IDs exist
-    for cause_id in cause_ids:
-        cause = await db.causes.find_one({"id": cause_id})
-        if not cause:
-            raise HTTPException(status_code=404, detail=f"Cause {cause_id} not found")
-    
-    await db.customers.update_one(
-        {"id": customer_id},
-        {"$set": {"preferred_causes": cause_ids}}
-    )
-    
-    return {"message": "Preferred causes updated successfully", "cause_count": len(cause_ids)}
-
-@api_router.post("/customers/{customer_id}/payment-methods")
-async def add_customer_payment_method(customer_id: str, payment_method: PaymentMethod):
-    """Add a payment method to customer"""
-    customer = await db.customers.find_one({"id": customer_id})
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    
-    await db.customers.update_one(
-        {"id": customer_id},
-        {"$push": {"payment_methods": payment_method.dict()}}
-    )
-    
-    return {"message": "Payment method added successfully"}
-
-# Enhanced direct contribution endpoints with payment processing
+# Enhanced direct contribution endpoints with expiry check
 @api_router.post("/contributions", response_model=DirectContribution)
 async def create_direct_contribution(contribution: DirectContributionCreate):
-    # Verify cause exists
+    # Verify cause exists and is not expired
     cause = await db.causes.find_one({"id": contribution.cause_id})
     if not cause:
         raise HTTPException(status_code=404, detail="Cause not found")
     
     cause_obj = Cause(**cause)
+    
+    # Check if cause is expired
+    if cause_obj.expired or (cause_obj.end_date and cause_obj.end_date < datetime.utcnow()):
+        raise HTTPException(status_code=400, detail="This cause has expired and no longer accepts contributions")
     
     # Check if payment method is accepted by this cause
     if contribution.payment_method.type not in cause_obj.payment_methods_accepted:
@@ -611,6 +826,251 @@ async def get_contributions(
     contributions = await db.direct_contributions.find(query).sort("timestamp", -1).to_list(1000)
     return [DirectContribution(**contribution) for contribution in contributions]
 
+# Subscription endpoints
+@api_router.post("/subscriptions", response_model=Subscription)
+async def create_subscription(subscription_data: SubscriptionCreate, user_id: str, user_type: str):
+    if user_type not in ["customer", "business"]:
+        raise HTTPException(status_code=400, detail="Invalid user type")
+    
+    # Get user
+    collection = db.customers if user_type == "customer" else db.businesses
+    user = await collection.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if user already has an active subscription
+    if user.get("subscription") and user["subscription"]["status"] == "active":
+        raise HTTPException(status_code=400, detail="User already has an active subscription")
+    
+    # Get plan details
+    plan_category = "individual" if user_type == "customer" else "business"
+    if subscription_data.plan_type not in SUBSCRIPTION_PLANS[plan_category]:
+        raise HTTPException(status_code=400, detail="Invalid plan type")
+    
+    plan_details = SUBSCRIPTION_PLANS[plan_category][subscription_data.plan_type]
+    
+    # Calculate end date based on plan type
+    if subscription_data.plan_type == "monthly":
+        end_date = datetime.utcnow() + timedelta(days=30)
+    elif subscription_data.plan_type == "yearly":
+        end_date = datetime.utcnow() + timedelta(days=365)
+    elif subscription_data.plan_type == "premium":
+        end_date = datetime.utcnow() + timedelta(days=365)
+    
+    # Create subscription
+    subscription_obj = Subscription(
+        user_id=user_id,
+        user_type=user_type,
+        plan_type=subscription_data.plan_type,
+        amount=plan_details["price"],
+        end_date=end_date,
+        auto_renew=subscription_data.auto_renew
+    )
+    
+    await db.subscriptions.insert_one(subscription_obj.dict())
+    
+    # Update user with subscription
+    await collection.update_one(
+        {"id": user_id},
+        {"$set": {"subscription": subscription_obj.dict()}}
+    )
+    
+    # Award subscriber badge
+    await check_and_award_badges(user_type, user_id, user)
+    
+    return subscription_obj
+
+@api_router.get("/subscriptions/{user_id}")
+async def get_user_subscription(user_id: str, user_type: str):
+    collection = db.customers if user_type == "customer" else db.businesses
+    user = await collection.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return user.get("subscription", None)
+
+@api_router.get("/subscription-plans")
+async def get_subscription_plans():
+    return SUBSCRIPTION_PLANS
+
+# Enhanced leaderboard endpoints with cause-specific data
+@api_router.get("/leaderboards/businesses")
+async def get_business_leaderboard(metric: str = "total_impact", limit: int = 10):
+    valid_metrics = ["total_impact", "total_sales", "transaction_count"]
+    if metric not in valid_metrics:
+        raise HTTPException(status_code=400, detail=f"Invalid metric. Choose from: {valid_metrics}")
+    
+    businesses = await db.businesses.find().sort(metric, -1).limit(limit).to_list(limit)
+    
+    leaderboard = []
+    for rank, business in enumerate(businesses, 1):
+        business_obj = Business(**business)
+        
+        # Get cause breakdown for this business
+        causes_supported = []
+        for cause_id in business_obj.preferred_causes:
+            cause = await db.causes.find_one({"id": cause_id})
+            if cause:
+                causes_supported.append({
+                    "id": cause["id"],
+                    "name": cause["name"],
+                    "category": cause["category"]
+                })
+        
+        leaderboard.append({
+            "rank": rank,
+            "business": business_obj,
+            "metric_value": getattr(business_obj, metric),
+            "badges": business_obj.badges,
+            "causes_supported": causes_supported,
+            "settlement_info": business_obj.settlement_info
+        })
+    
+    return {
+        "metric": metric,
+        "leaderboard": leaderboard
+    }
+
+@api_router.get("/leaderboards/customers")
+async def get_customer_leaderboard(metric: str = "total_contributions", limit: int = 10):
+    valid_metrics = ["total_contributions", "contribution_count"]
+    if metric not in valid_metrics:
+        raise HTTPException(status_code=400, detail=f"Invalid metric. Choose from: {valid_metrics}")
+    
+    customers = await db.customers.find().sort(metric, -1).limit(limit).to_list(limit)
+    
+    leaderboard = []
+    for rank, customer in enumerate(customers, 1):
+        customer_obj = Customer(**customer)
+        
+        # Get contribution breakdown by cause
+        contributions_by_cause = await db.direct_contributions.aggregate([
+            {"$match": {"customer_id": customer["id"]}},
+            {"$group": {
+                "_id": "$cause_id",
+                "total_amount": {"$sum": "$amount"},
+                "count": {"$sum": 1}
+            }}
+        ]).to_list(100)
+        
+        cause_breakdown = []
+        for contrib in contributions_by_cause:
+            cause = await db.causes.find_one({"id": contrib["_id"]})
+            if cause:
+                cause_breakdown.append({
+                    "cause_name": cause["name"],
+                    "category": cause["category"],
+                    "total_contributed": contrib["total_amount"],
+                    "contribution_count": contrib["count"]
+                })
+        
+        leaderboard.append({
+            "rank": rank,
+            "customer": customer_obj,
+            "metric_value": getattr(customer_obj, metric),
+            "badges": customer_obj.badges,
+            "cause_breakdown": cause_breakdown,
+            "settlement_info": customer_obj.settlement_info
+        })
+    
+    return {
+        "metric": metric,
+        "leaderboard": leaderboard
+    }
+
+@api_router.get("/leaderboards/causes")
+async def get_cause_leaderboard(metric: str = "total_raised", limit: int = 10):
+    valid_metrics = ["total_raised", "total_impact_units"]
+    if metric not in valid_metrics:
+        raise HTTPException(status_code=400, detail=f"Invalid metric. Choose from: {valid_metrics}")
+    
+    causes = await db.causes.find().sort(metric, -1).limit(limit).to_list(limit)
+    
+    leaderboard = []
+    for rank, cause in enumerate(causes, 1):
+        cause_obj = Cause(**cause)
+        
+        # Get contribution breakdown for this cause
+        contributions = await db.direct_contributions.find({"cause_id": cause["id"]}).to_list(1000)
+        
+        contributor_stats = {
+            "total_contributors": len(set([c.get("customer_id") for c in contributions if c.get("customer_id")])),
+            "anonymous_contributions": len([c for c in contributions if not c.get("customer_id")]),
+            "recent_contributions": len([c for c in contributions if datetime.fromisoformat(c["timestamp"].replace('Z', '+00:00')) > datetime.utcnow() - timedelta(days=7)])
+        }
+        
+        leaderboard.append({
+            "rank": rank,
+            "cause": cause_obj,
+            "metric_value": getattr(cause_obj, metric),
+            "contributor_stats": contributor_stats,
+            "progress_percentage": (cause_obj.total_raised / cause_obj.goal_amount * 100) if cause_obj.goal_amount else 0
+        })
+    
+    return {
+        "metric": metric,
+        "leaderboard": leaderboard
+    }
+
+# Customer endpoints (enhanced with settlement info)
+@api_router.post("/customers", response_model=Customer)
+async def create_customer(customer: CustomerCreate):
+    # Check if email already exists
+    existing = await db.customers.find_one({"email": customer.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    customer_dict = customer.dict()
+    customer_obj = Customer(**customer_dict)
+    await db.customers.insert_one(customer_obj.dict())
+    return customer_obj
+
+@api_router.get("/customers", response_model=List[Customer])
+async def get_customers():
+    customers = await db.customers.find().to_list(1000)
+    return [Customer(**customer) for customer in customers]
+
+@api_router.get("/customers/{customer_id}", response_model=Customer)
+async def get_customer(customer_id: str):
+    customer = await db.customers.find_one({"id": customer_id})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return Customer(**customer)
+
+@api_router.put("/customers/{customer_id}/settlement")
+async def update_customer_settlement(customer_id: str, settlement_info: SettlementInfo):
+    """Update customer settlement information"""
+    customer = await db.customers.find_one({"id": customer_id})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    await db.customers.update_one(
+        {"id": customer_id},
+        {"$set": {"settlement_info": settlement_info.dict()}}
+    )
+    
+    return {"message": "Settlement information updated successfully"}
+
+@api_router.put("/customers/{customer_id}/causes")
+async def update_customer_preferred_causes(customer_id: str, cause_ids: List[str]):
+    """Update customer's preferred causes"""
+    customer = await db.customers.find_one({"id": customer_id})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    # Validate that all cause IDs exist
+    for cause_id in cause_ids:
+        cause = await db.causes.find_one({"id": cause_id})
+        if not cause:
+            raise HTTPException(status_code=404, detail=f"Cause {cause_id} not found")
+    
+    await db.customers.update_one(
+        {"id": customer_id},
+        {"$set": {"preferred_causes": cause_ids}}
+    )
+    
+    return {"message": "Preferred causes updated successfully", "cause_count": len(cause_ids)}
+
 # Enhanced business endpoints
 @api_router.post("/businesses", response_model=Business)
 async def create_business(business: BusinessCreate):
@@ -639,6 +1099,20 @@ async def get_business(business_id: str):
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
     return Business(**business)
+
+@api_router.put("/businesses/{business_id}/settlement")
+async def update_business_settlement(business_id: str, settlement_info: SettlementInfo):
+    """Update business settlement information"""
+    business = await db.businesses.find_one({"id": business_id})
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+    
+    await db.businesses.update_one(
+        {"id": business_id},
+        {"$set": {"settlement_info": settlement_info.dict()}}
+    )
+    
+    return {"message": "Settlement information updated successfully"}
 
 @api_router.put("/businesses/{business_id}/causes")
 async def update_business_preferred_causes(business_id: str, cause_ids: List[str]):
@@ -678,39 +1152,7 @@ async def update_impact_allocation(business_id: str, allocations: List[ImpactAll
     
     return {"message": "Impact allocation updated successfully", "total_percentage": total_percentage}
 
-# Enhanced cause endpoints
-@api_router.get("/causes", response_model=List[Cause])
-async def get_causes(
-    active_only: bool = True, 
-    featured_only: bool = False,
-    payment_method: Optional[str] = None
-):
-    query = {}
-    if active_only:
-        query["active"] = True
-    if featured_only:
-        query["featured"] = True
-    if payment_method:
-        query["payment_methods_accepted"] = payment_method
-    
-    causes = await db.causes.find(query).to_list(1000)
-    return [Cause(**cause) for cause in causes]
-
-@api_router.get("/causes/{cause_id}", response_model=Cause)
-async def get_cause(cause_id: str):
-    cause = await db.causes.find_one({"id": cause_id})
-    if not cause:
-        raise HTTPException(status_code=404, detail="Cause not found")
-    return Cause(**cause)
-
-@api_router.post("/causes", response_model=Cause)
-async def create_cause(cause: CauseCreate):
-    cause_dict = cause.dict()
-    cause_obj = Cause(**cause_dict)
-    await db.causes.insert_one(cause_obj.dict())
-    return cause_obj
-
-# Transaction endpoints (unchanged from previous version)
+# Transaction endpoints (unchanged)
 @api_router.post("/transactions", response_model=Transaction)
 async def create_transaction(transaction: TransactionCreate):
     business = await db.businesses.find_one({"id": transaction.business_id})
@@ -824,7 +1266,7 @@ async def get_api_documentation():
     """Get API documentation for developers"""
     return {
         "title": "ImpactLink Developer API",
-        "version": "3.0",
+        "version": "4.0",
         "description": "Complete API for integrating social impact into your applications",
         "base_url": "https://api.impactlink.com",
         "authentication": {
@@ -836,23 +1278,30 @@ async def get_api_documentation():
             "businesses": {
                 "POST /api/businesses": "Create a new business account",
                 "GET /api/businesses/{id}": "Get business details",
-                "PUT /api/businesses/{id}/impact-allocation": "Set impact allocation percentages"
+                "PUT /api/businesses/{id}/impact-allocation": "Set impact allocation percentages",
+                "PUT /api/businesses/{id}/settlement": "Update settlement information"
+            },
+            "causes": {
+                "GET /api/causes": "List all causes with filtering and sorting",
+                "POST /api/causes": "Create a new cause",
+                "GET /api/causes/{id}": "Get detailed cause information"
             },
             "transactions": {
                 "POST /api/transactions": "Record a new transaction with automatic impact calculation",
                 "GET /api/transactions": "List all transactions for a business"
             },
-            "causes": {
-                "GET /api/causes": "List all available causes",
-                "GET /api/causes/{id}": "Get detailed cause information"
-            },
             "contributions": {
                 "POST /api/contributions": "Create direct contribution (supports anonymous)",
                 "GET /api/contributions": "List contributions with filters"
             },
-            "external": {
-                "POST /api/external/transaction": "Create transaction via API key (for e-commerce integration)",
-                "GET /api/external/business/impact": "Get business impact data via API key"
+            "subscriptions": {
+                "POST /api/subscriptions": "Create user subscription",
+                "GET /api/subscriptions/{user_id}": "Get user subscription details"
+            },
+            "leaderboards": {
+                "GET /api/leaderboards/businesses": "Business leaderboard",
+                "GET /api/leaderboards/customers": "Customer leaderboard",
+                "GET /api/leaderboards/causes": "Cause performance leaderboard"
             }
         },
         "examples": {
@@ -876,6 +1325,20 @@ async def get_api_documentation():
                     },
                     "customer_name": "Anonymous Donor",
                     "message": "Keep up the great work!"
+                }
+            },
+            "create_cause": {
+                "url": "POST /api/causes",
+                "body": {
+                    "name": "Education Initiative",
+                    "description": "Supporting education in rural areas",
+                    "category": "Education",
+                    "impact_metric": "students supported",
+                    "cost_per_impact": 30.0,
+                    "goal_amount": 10000.0,
+                    "end_date": "2025-12-31T23:59:59Z",
+                    "creator_id": "business_or_customer_id",
+                    "creator_type": "business"
                 }
             }
         }
@@ -930,7 +1393,7 @@ async def get_sdk_information():
         },
         "webhooks": {
             "description": "Get real-time notifications for contributions and transactions",
-            "events": ["contribution.created", "transaction.created", "impact.milestone"],
+            "events": ["contribution.created", "transaction.created", "impact.milestone", "cause.expired"],
             "setup": "Configure webhook URLs in your business dashboard"
         },
         "plugins": {
@@ -947,56 +1410,7 @@ async def get_sdk_information():
         }
     }
 
-# Leaderboard endpoints (enhanced)
-@api_router.get("/leaderboards/businesses")
-async def get_business_leaderboard(metric: str = "total_impact", limit: int = 10):
-    valid_metrics = ["total_impact", "total_sales", "transaction_count"]
-    if metric not in valid_metrics:
-        raise HTTPException(status_code=400, detail=f"Invalid metric. Choose from: {valid_metrics}")
-    
-    businesses = await db.businesses.find().sort(metric, -1).limit(limit).to_list(limit)
-    
-    leaderboard = []
-    for rank, business in enumerate(businesses, 1):
-        business_obj = Business(**business)
-        leaderboard.append({
-            "rank": rank,
-            "business": business_obj,
-            "metric_value": getattr(business_obj, metric),
-            "badges": business_obj.badges,
-            "preferred_causes": business_obj.preferred_causes
-        })
-    
-    return {
-        "metric": metric,
-        "leaderboard": leaderboard
-    }
-
-@api_router.get("/leaderboards/customers")
-async def get_customer_leaderboard(metric: str = "total_contributions", limit: int = 10):
-    valid_metrics = ["total_contributions", "contribution_count"]
-    if metric not in valid_metrics:
-        raise HTTPException(status_code=400, detail=f"Invalid metric. Choose from: {valid_metrics}")
-    
-    customers = await db.customers.find().sort(metric, -1).limit(limit).to_list(limit)
-    
-    leaderboard = []
-    for rank, customer in enumerate(customers, 1):
-        customer_obj = Customer(**customer)
-        leaderboard.append({
-            "rank": rank,
-            "customer": customer_obj,
-            "metric_value": getattr(customer_obj, metric),
-            "badges": customer_obj.badges,
-            "preferred_causes": customer_obj.preferred_causes
-        })
-    
-    return {
-        "metric": metric,
-        "leaderboard": leaderboard
-    }
-
-# Badge endpoints (unchanged)
+# Badge endpoints
 @api_router.get("/badges")
 async def get_all_badges():
     return [badge.dict() for badge in BADGES.values()]
@@ -1021,16 +1435,21 @@ async def get_user_badges(user_type: str, user_id: str):
         "badges": badge_details
     }
 
-# Admin endpoints (enhanced)
+# Enhanced admin endpoints
 @api_router.get("/admin/dashboard")
 async def get_admin_dashboard():
+    # Check and update expired causes
+    await check_cause_expiry()
+    
     # Platform statistics
     total_businesses = await db.businesses.count_documents({})
     total_customers = await db.customers.count_documents({})
     total_causes = await db.causes.count_documents({"active": True})
+    expired_causes = await db.causes.count_documents({"expired": True})
     total_transactions = await db.transactions.count_documents({})
     total_contributions = await db.direct_contributions.count_documents({})
     anonymous_contributions = await db.direct_contributions.count_documents({"customer_id": None})
+    active_subscriptions = await db.subscriptions.count_documents({"status": "active"})
     
     # Financial metrics
     business_impact = await db.businesses.aggregate([
@@ -1057,14 +1476,22 @@ async def get_admin_dashboard():
     # Top causes by total raised
     top_causes = await db.causes.find().sort("total_raised", -1).limit(5).to_list(5)
     
+    # Causes expiring soon
+    soon_expiring = await db.causes.find({
+        "end_date": {"$gte": datetime.utcnow(), "$lte": datetime.utcnow() + timedelta(days=7)},
+        "active": True
+    }).to_list(10)
+    
     return {
         "statistics": {
             "total_businesses": total_businesses,
             "total_customers": total_customers,
             "total_causes": total_causes,
+            "expired_causes": expired_causes,
             "total_transactions": total_transactions,
             "total_contributions": total_contributions,
             "anonymous_contributions": anonymous_contributions,
+            "active_subscriptions": active_subscriptions,
             "total_platform_impact": total_platform_impact,
             "business_impact": total_business_impact,
             "customer_contributions": total_customer_contributions
@@ -1074,7 +1501,8 @@ async def get_admin_dashboard():
             "transactions": [Transaction(**t) for t in recent_transactions],
             "contributions": [DirectContribution(**c) for c in recent_contributions]
         },
-        "top_causes": [Cause(**c) for c in top_causes]
+        "top_causes": [Cause(**c) for c in top_causes],
+        "expiring_soon": [Cause(**c) for c in soon_expiring]
     }
 
 @api_router.get("/admin/businesses")
@@ -1111,6 +1539,24 @@ async def update_cause(cause_id: str, cause_update: CauseCreate):
     
     return {"message": "Cause updated successfully"}
 
+@api_router.get("/admin/demo-users")
+async def get_demo_users():
+    """Get demo users for platform testing"""
+    demo_business = await db.businesses.find_one({"name": "EcoTech Solutions"})
+    demo_customer = await db.customers.find_one({"name": "Sarah Green"})
+    demo_admins = await db.admin_users.find().to_list(10)
+    
+    return {
+        "demo_business": Business(**demo_business) if demo_business else None,
+        "demo_customer": Customer(**demo_customer) if demo_customer else None,
+        "demo_admins": [AdminUser(**admin) for admin in demo_admins],
+        "login_instructions": {
+            "business": "Use EcoTech Solutions for business demo",
+            "customer": "Use Sarah Green for customer demo",
+            "admin": "Use admin or demo_admin for admin functions"
+        }
+    }
+
 # Enhanced dashboard endpoints
 @api_router.get("/impact/dashboard/{business_id}")
 async def get_impact_dashboard(business_id: str):
@@ -1134,7 +1580,8 @@ async def get_impact_dashboard(business_id: str):
                 "percentage": percentage,
                 "category": cause_obj.category,
                 "impact_metric": cause_obj.impact_metric,
-                "total_contribution": (business_obj.total_sales * percentage) / 100
+                "total_contribution": (business_obj.total_sales * percentage) / 100,
+                "expired": cause_obj.expired
             }
     
     return {
@@ -1145,7 +1592,8 @@ async def get_impact_dashboard(business_id: str):
         "total_impact": business_obj.total_impact,
         "impact_percentage": (business_obj.total_impact / business_obj.total_sales * 100) if business_obj.total_sales > 0 else 0,
         "badges": business_obj.badges,
-        "preferred_causes": business_obj.preferred_causes
+        "preferred_causes": business_obj.preferred_causes,
+        "settlement_info": business_obj.settlement_info
     }
 
 @api_router.get("/impact/public/{business_id}")
@@ -1177,6 +1625,7 @@ async def get_public_impact(business_id: str):
     return {
         "business_name": business_obj.name,
         "business_description": business_obj.description,
+        "website": business_obj.website,
         "total_sales": business_obj.total_sales,
         "total_impact": business_obj.total_impact,
         "cause_breakdown": cause_breakdown,
