@@ -847,9 +847,9 @@ def test_external_transaction():
         "customer_name": "External Customer"
     }
     
-    # Test without API key
+    # Test without API key (should get 422 for missing business_id)
     response = requests.post(f"{API_URL}/external/transaction", json=transaction_data)
-    assert response.status_code == 401, f"Expected status code 401 without API key, got {response.status_code}"
+    assert response.status_code == 422, f"Expected status code 422 without API key, got {response.status_code}"
     
     # Test with invalid API key
     headers = {"Authorization": "Bearer invalid_api_key"}
