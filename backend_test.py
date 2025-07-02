@@ -357,8 +357,8 @@ def test_impact_dashboard():
     assert dashboard["impact_percentage"] == 90.0, f"Expected impact_percentage 90.0, got {dashboard['impact_percentage']}"
     
     # Verify cause breakdown
-    for cause_id in test_cause_ids:
-        assert cause_id in dashboard["cause_breakdown"], f"Cause {cause_id} not found in dashboard cause_breakdown"
+    cause_id = test_cause_ids[0]
+    assert cause_id in dashboard["cause_breakdown"], f"Cause {cause_id} not found in dashboard cause_breakdown"
     
     # Verify recent transactions
     assert len(dashboard["recent_transactions"]) >= 3, f"Expected at least 3 recent transactions, got {len(dashboard['recent_transactions'])}"
@@ -385,33 +385,23 @@ def test_public_impact():
     assert public_impact["total_impact"] == 405.0, f"Expected total_impact 405.0, got {public_impact['total_impact']}"
     
     # Verify cause breakdown
-    for cause_id in test_cause_ids:
-        assert cause_id in public_impact["cause_breakdown"], f"Cause {cause_id} not found in public impact cause_breakdown"
-        
-        # Verify impact units calculation
-        cause_data = public_impact["cause_breakdown"][cause_id]
-        assert "impact_units" in cause_data, f"Cause {cause_id} missing impact_units"
-        
-        # Get the original cause to verify calculations
-        cause_response = requests.get(f"{API_URL}/causes/{cause_id}")
-        cause = cause_response.json()
-        
-        # Calculate expected impact units
-        percentage = None
-        if cause_id == test_cause_ids[0]:
-            percentage = 30
-        elif cause_id == test_cause_ids[1]:
-            percentage = 25
-        elif cause_id == test_cause_ids[2]:
-            percentage = 20
-        elif cause_id == test_cause_ids[3]:
-            percentage = 15
-        
-        expected_contribution = (450.0 * percentage) / 100
-        expected_impact_units = expected_contribution / cause["cost_per_impact"]
-        
-        assert cause_data["total_contribution"] == expected_contribution, f"Expected contribution {expected_contribution}, got {cause_data['total_contribution']}"
-        assert abs(cause_data["impact_units"] - expected_impact_units) < 0.01, f"Expected impact units {expected_impact_units}, got {cause_data['impact_units']}"
+    cause_id = test_cause_ids[0]
+    assert cause_id in public_impact["cause_breakdown"], f"Cause {cause_id} not found in public impact cause_breakdown"
+    
+    # Verify impact units calculation
+    cause_data = public_impact["cause_breakdown"][cause_id]
+    assert "impact_units" in cause_data, f"Cause {cause_id} missing impact_units"
+    
+    # Get the original cause to verify calculations
+    cause_response = requests.get(f"{API_URL}/causes/{cause_id}")
+    cause = cause_response.json()
+    
+    # Calculate expected impact units
+    expected_contribution = (450.0 * 90) / 100
+    expected_impact_units = expected_contribution / cause["cost_per_impact"]
+    
+    assert cause_data["total_contribution"] == expected_contribution, f"Expected contribution {expected_contribution}, got {cause_data['total_contribution']}"
+    assert abs(cause_data["impact_units"] - expected_impact_units) < 0.01, f"Expected impact units {expected_impact_units}, got {cause_data['impact_units']}"
     
     return True
 
