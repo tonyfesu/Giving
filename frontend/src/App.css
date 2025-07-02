@@ -1,38 +1,183 @@
 .App {
-    text-align: center;
-}
-
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  text-align: center;
+  padding: 20px;
 }
 
 .App-link {
-    color: #61dafb;
+  color: #61dafb;
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 20px;
+  transition: transform 0.3s ease;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.App-link:hover {
+  transform: scale(1.05);
+}
+
+.App-link img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 4px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Animation utilities */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+/* Button hover effects */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Card styles */
+.card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Loading states */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Form styles */
+.form-input {
+  transition: all 0.3s ease;
+}
+
+.form-input:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Success animations */
+@keyframes successPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.success-pulse {
+  animation: successPulse 0.6s ease-out;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .App-header {
+    font-size: 24px;
+    padding: 40px 20px;
+  }
+  
+  .App-link img {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+/* Impact visualization */
+.impact-meter {
+  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  height: 8px;
+  border-radius: 4px;
+  transition: width 0.8s ease;
+}
+
+/* Cause category colors */
+.cause-education {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.cause-health {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.cause-environment {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.cause-poverty {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+/* Transaction success effect */
+.transaction-success {
+  animation: successPulse 0.6s ease-out;
+  border: 2px solid #10b981;
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
 }
