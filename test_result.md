@@ -240,8 +240,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Transaction processing with real-time impact calculation"
-    - "Impact dashboard API with comprehensive metrics"
     - "Impact allocation interface with cause selection"
     - "Transaction simulation and creation interface"
     - "Real-time impact dashboard with metrics visualization"
