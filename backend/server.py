@@ -702,7 +702,27 @@ async def get_causes(
     sort_direction = -1 if sort_order == "desc" else 1
     
     causes = await db.causes.find(query).sort(sort_by, sort_direction).to_list(1000)
-    return [Cause(**cause) for cause in causes]
+    
+    # Filter out causes that don't have required fields and convert to Cause objects
+    valid_causes = []
+    for cause in causes:
+        try:
+            # Ensure required fields exist
+            if "creator_id" not in cause:
+                cause["creator_id"] = "unknown"
+            if "creator_type" not in cause:
+                cause["creator_type"] = "unknown"
+            if "creator_name" not in cause:
+                cause["creator_name"] = "Unknown Creator"
+            if "creator_website" not in cause:
+                cause["creator_website"] = None
+                
+            valid_causes.append(Cause(**cause))
+        except Exception as e:
+            print(f"Error processing cause {cause.get('id', 'unknown')}: {e}")
+            continue
+            
+    return valid_causes
 
 @api_router.get("/causes/{cause_id}", response_model=Cause)
 async def get_cause(cause_id: str):
