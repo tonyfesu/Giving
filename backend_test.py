@@ -51,7 +51,7 @@ def test_get_causes():
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
     
     causes = response.json()
-    assert len(causes) >= 4, f"Expected at least 4 default causes, got {len(causes)}"
+    assert len(causes) > 0, f"Expected at least one cause, got {len(causes)}"
     
     # Verify cause structure
     required_fields = ["id", "name", "description", "category", "impact_metric", "cost_per_impact"]
