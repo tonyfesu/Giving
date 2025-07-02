@@ -262,6 +262,17 @@ backend:
         comment: "External API system works correctly. Businesses can use their API keys to create transactions and retrieve impact data. Public API for causes is also working."
 
 
+  - task: "Verification of 10 sample data for 5 different causes and users"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "User requested verification of 10 sample data for 5 different causes and users. Current system shows 6 causes and 2 demo users plus admins in init_default_data(). Need to test backend endpoints to verify actual data state and determine if additional sample data is needed."
 
 frontend:
   - task: "Beautiful landing page with hero section and features"
