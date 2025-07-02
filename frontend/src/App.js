@@ -831,7 +831,7 @@ const HeroSection = () => {
         </h1>
         <p className="text-xl md:text-2xl mb-8 opacity-90 max-w-3xl mx-auto">
           ImpactLink connects businesses and customers to drive meaningful social change through commerce. 
-          Donate directly, track your impact in real-time with multiple payment options.
+          Donate directly and track your impact in real-time.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button className="bg-yellow-400 text-black px-8 py-4 rounded-full font-semibold text-lg hover:bg-yellow-300 transform hover:scale-105 transition-all shadow-lg">
