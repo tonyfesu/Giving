@@ -494,11 +494,14 @@ def test_create_direct_contribution():
     response = requests.get(f"{API_URL}/causes")
     causes = response.json()
     
+    # Make sure we have at least one cause
+    assert len(causes) > 0, "Need at least one cause for contribution test"
+    
     contribution_data = {
         "customer_id": test_customer_id,
-        "cause_id": causes[0]["id"],  # Education
+        "cause_id": causes[0]["id"],
         "amount": 100.00,
-        "message": "Supporting education for all!",
+        "message": "Supporting this cause!",
         "anonymous": False
     }
     
@@ -526,9 +529,9 @@ def test_create_direct_contribution():
     # Second contribution for first customer
     contribution_data = {
         "customer_id": test_customer_id,
-        "cause_id": causes[1]["id"],  # Clean Water
+        "cause_id": causes[0]["id"],
         "amount": 200.00,
-        "message": "Clean water for communities!",
+        "message": "Another contribution!",
         "anonymous": False
     }
     
@@ -538,9 +541,9 @@ def test_create_direct_contribution():
     # Third contribution for first customer (should trigger generous_giver badge)
     contribution_data = {
         "customer_id": test_customer_id,
-        "cause_id": causes[2]["id"],  # Forest
+        "cause_id": causes[0]["id"],
         "amount": 250.00,
-        "message": "Planting trees for the future!",
+        "message": "Big contribution!",
         "anonymous": False
     }
     
@@ -550,9 +553,9 @@ def test_create_direct_contribution():
     # Contribution for second customer
     contribution_data = {
         "customer_id": test_customer_id2,
-        "cause_id": causes[0]["id"],  # Education
+        "cause_id": causes[0]["id"],
         "amount": 150.00,
-        "message": "Education matters!",
+        "message": "First contribution!",
         "anonymous": False
     }
     
