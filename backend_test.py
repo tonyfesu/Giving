@@ -352,48 +352,91 @@ def test_public_impact():
     
     return True
 
-def verify_impact_calculations():
-    """Verify that impact calculations are accurate across the system"""
-    # Get the business data
-    response = requests.get(f"{API_URL}/businesses/{test_business_id}")
+def test_comprehensive_flow():
+    """Test the entire business flow from creation to impact tracking"""
+    # 1. Create a new business
+    business_data = {
+        "name": "Mountain View Bakery",
+        "description": "Artisanal bakery with locally sourced ingredients",
+        "industry": "Food & Beverage",
+        "email": "info@mountainviewbakery.com",
+        "phone": "555-987-6543",
+        "website": "https://mountainviewbakery.com"
+    }
+    
+    response = requests.post(f"{API_URL}/businesses", json=business_data)
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
     business = response.json()
+    business_id = business["id"]
     
-    # Get all transactions for this business
-    response = requests.get(f"{API_URL}/transactions?business_id={test_business_id}")
-    transactions = response.json()
-    
-    # Calculate expected totals
-    expected_total_sales = sum(t["amount"] for t in transactions)
-    expected_total_impact = sum(t["total_impact_amount"] for t in transactions)
-    
-    # Verify business totals
-    assert business["total_sales"] == expected_total_sales, f"Expected total_sales {expected_total_sales}, got {business['total_sales']}"
-    assert business["total_impact"] == expected_total_impact, f"Expected total_impact {expected_total_impact}, got {business['total_impact']}"
-    
-    # Get all causes
+    # 2. Get all causes
     response = requests.get(f"{API_URL}/causes")
     causes = response.json()
     
-    # Verify cause totals
-    for cause in causes:
-        cause_id = cause["id"]
-        if cause_id not in test_cause_ids:
-            continue
-            
-        # Calculate expected raised amount and impact units
-        expected_raised = 0
-        for transaction in transactions:
-            if cause_id in transaction["impact_breakdown"]:
-                expected_raised += transaction["impact_breakdown"][cause_id]["amount"]
+    # 3. Set impact allocations (40% Education, 40% Forest, 20% Food Security)
+    allocations = [
+        {"cause_id": causes[0]["id"], "percentage": 40},  # Education
+        {"cause_id": causes[2]["id"], "percentage": 40},  # Forest
+        {"cause_id": causes[3]["id"], "percentage": 20},  # Food Security
+    ]
+    
+    response = requests.put(f"{API_URL}/businesses/{business_id}/impact-allocation", json=allocations)
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    # 4. Create multiple transactions
+    transactions = [
+        {"amount": 75.50, "customer_name": "Sarah Wilson"},
+        {"amount": 120.25, "customer_name": "Michael Brown"},
+        {"amount": 45.75, "customer_name": "Emily Davis"}
+    ]
+    
+    for transaction_data in transactions:
+        transaction_data["business_id"] = business_id
+        response = requests.post(f"{API_URL}/transactions", json=transaction_data)
+        assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    # 5. Get dashboard and verify calculations
+    response = requests.get(f"{API_URL}/impact/dashboard/{business_id}")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    dashboard = response.json()
+    
+    # Calculate expected totals
+    total_sales = sum(t["amount"] for t in transactions)
+    total_impact = total_sales  # 100% allocation
+    
+    assert dashboard["total_sales"] == total_sales, f"Expected total_sales {total_sales}, got {dashboard['total_sales']}"
+    assert abs(dashboard["total_impact"] - total_impact) < 0.01, f"Expected total_impact {total_impact}, got {dashboard['total_impact']}"
+    
+    # 6. Verify public impact page
+    response = requests.get(f"{API_URL}/impact/public/{business_id}")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    public_impact = response.json()
+    assert public_impact["total_sales"] == total_sales, f"Expected total_sales {total_sales}, got {public_impact['total_sales']}"
+    assert abs(public_impact["total_impact"] - total_impact) < 0.01, f"Expected total_impact {total_impact}, got {public_impact['total_impact']}"
+    
+    # 7. Verify cause breakdown
+    for allocation in allocations:
+        cause_id = allocation["cause_id"]
+        percentage = allocation["percentage"]
         
-        expected_impact_units = expected_raised / cause["cost_per_impact"]
+        # Get cause details
+        cause_response = requests.get(f"{API_URL}/causes/{cause_id}")
+        cause = cause_response.json()
         
-        # Get updated cause data
-        response = requests.get(f"{API_URL}/causes/{cause_id}")
-        updated_cause = response.json()
+        # Calculate expected values
+        expected_contribution = (total_sales * percentage) / 100
+        expected_impact_units = expected_contribution / cause["cost_per_impact"]
         
-        assert abs(updated_cause["total_raised"] - expected_raised) < 0.01, f"Cause {cause_id}: Expected total_raised {expected_raised}, got {updated_cause['total_raised']}"
-        assert abs(updated_cause["total_impact_units"] - expected_impact_units) < 0.01, f"Cause {cause_id}: Expected total_impact_units {expected_impact_units}, got {updated_cause['total_impact_units']}"
+        # Verify in public impact
+        assert cause_id in public_impact["cause_breakdown"], f"Cause {cause_id} not found in public impact"
+        cause_data = public_impact["cause_breakdown"][cause_id]
+        
+        assert cause_data["percentage"] == percentage, f"Expected percentage {percentage}, got {cause_data['percentage']}"
+        assert abs(cause_data["total_contribution"] - expected_contribution) < 0.01, f"Expected contribution {expected_contribution}, got {cause_data['total_contribution']}"
+        assert abs(cause_data["impact_units"] - expected_impact_units) < 0.01, f"Expected impact units {expected_impact_units}, got {cause_data['impact_units']}"
     
     return True
 
@@ -414,7 +457,7 @@ if __name__ == "__main__":
     run_test("Get Transactions", test_get_transactions)
     run_test("Impact Dashboard", test_impact_dashboard)
     run_test("Public Impact", test_public_impact)
-    run_test("Verify Impact Calculations", verify_impact_calculations)
+    run_test("Comprehensive Flow", test_comprehensive_flow)
     
     # Print summary
     print(f"\n{'='*80}")
