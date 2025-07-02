@@ -1421,6 +1421,10 @@ function AppContent() {
 
 
 function App() {
-  return <AppContent />;
+  return (
+    <UserProvider>
+      <AppContent />
+    </UserProvider>
+  );
 }
 export default App;
