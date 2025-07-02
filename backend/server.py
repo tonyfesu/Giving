@@ -62,7 +62,7 @@ class Transaction(BaseModel):
     business_id: str
     amount: float
     customer_name: Optional[str] = None
-    impact_breakdown: Dict[str, Dict[str, float]] = Field(default_factory=dict)  # cause_id -> {amount, impact_units}
+    impact_breakdown: Dict[str, Dict[str, object]] = Field(default_factory=dict)  # cause_id -> {amount, impact_units, cause_name, impact_metric}
     total_impact_amount: float = 0.0
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
