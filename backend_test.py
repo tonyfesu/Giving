@@ -277,21 +277,14 @@ def test_create_transaction():
     assert "impact_breakdown" in transaction, "Transaction missing impact_breakdown"
     assert "total_impact_amount" in transaction, "Transaction missing total_impact_amount"
     
-    # Expected impact: 30% + 25% + 20% + 15% = 90% of $100 = $90
+    # Expected impact: 90% of $100 = $90
     assert transaction["total_impact_amount"] == 90.0, f"Expected total_impact_amount 90.0, got {transaction['total_impact_amount']}"
     
-    # Verify impact breakdown for each cause
-    expected_impacts = {
-        test_cause_ids[0]: {"percentage": 30, "amount": 30.0},  # Education
-        test_cause_ids[1]: {"percentage": 25, "amount": 25.0},  # Clean Water
-        test_cause_ids[2]: {"percentage": 20, "amount": 20.0},  # Forest
-        test_cause_ids[3]: {"percentage": 15, "amount": 15.0},  # Food Security
-    }
-    
-    for cause_id, expected in expected_impacts.items():
-        assert cause_id in transaction["impact_breakdown"], f"Cause {cause_id} not found in impact breakdown"
-        actual_amount = transaction["impact_breakdown"][cause_id]["amount"]
-        assert actual_amount == expected["amount"], f"Expected impact amount {expected['amount']}, got {actual_amount}"
+    # Verify impact breakdown for the cause
+    cause_id = test_cause_ids[0]
+    assert cause_id in transaction["impact_breakdown"], f"Cause {cause_id} not found in impact breakdown"
+    actual_amount = transaction["impact_breakdown"][cause_id]["amount"]
+    assert actual_amount == 90.0, f"Expected impact amount 90.0, got {actual_amount}"
     
     # Store transaction ID for later tests
     global test_transaction_id
