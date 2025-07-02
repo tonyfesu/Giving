@@ -252,3 +252,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Completed ImpactLink MVP with core features: business registration, cause selection, impact allocation engine, transaction processing, and real-time impact tracking. Ready for comprehensive testing of backend APIs and frontend functionality."
+  - agent: "testing"
+    message: "Completed comprehensive testing of backend APIs. Fixed an issue with the Transaction model where string values were being stored in a field that only accepted numbers. All core backend functionality is now working correctly, including business management, cause management, transaction processing with impact calculations, and dashboard metrics. The only minor issue is that cause totals accumulate across test runs, but this doesn't affect the core functionality."
