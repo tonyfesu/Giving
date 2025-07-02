@@ -931,10 +931,11 @@ def test_external_causes():
 
 def test_customer_contribution_badge_flow():
     """Test the flow: Create customer → Make multiple contributions → Verify badge awarding"""
-    # 1. Create a new customer
+    # 1. Create a new customer with unique email
+    timestamp = int(time.time())
     customer_data = {
         "name": "Sarah Williams",
-        "email": "sarah.williams@example.com",
+        "email": f"sarah.williams{timestamp}@example.com",
         "phone": "555-222-3333"
     }
     
