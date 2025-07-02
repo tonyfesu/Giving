@@ -1186,7 +1186,7 @@ const FeaturesSection = () => {
 };
 
 // Main App Component
-function App() {
+function AppContent() {
   const [currentView, setCurrentView] = useState("home");
   const [business, setBusiness] = useState(null);
   const [recentTransaction, setRecentTransaction] = useState(null);
