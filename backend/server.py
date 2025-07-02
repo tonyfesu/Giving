@@ -1008,24 +1008,38 @@ async def get_cause_leaderboard(metric: str = "total_raised", limit: int = 10):
     
     leaderboard = []
     for rank, cause in enumerate(causes, 1):
-        cause_obj = Cause(**cause)
-        
-        # Get contribution breakdown for this cause
-        contributions = await db.direct_contributions.find({"cause_id": cause["id"]}).to_list(1000)
-        
-        contributor_stats = {
-            "total_contributors": len(set([c.get("customer_id") for c in contributions if c.get("customer_id")])),
-            "anonymous_contributions": len([c for c in contributions if not c.get("customer_id")]),
-            "recent_contributions": len([c for c in contributions if datetime.fromisoformat(c["timestamp"].replace('Z', '+00:00')) > datetime.utcnow() - timedelta(days=7)])
-        }
-        
-        leaderboard.append({
-            "rank": rank,
-            "cause": cause_obj,
-            "metric_value": getattr(cause_obj, metric),
-            "contributor_stats": contributor_stats,
-            "progress_percentage": (cause_obj.total_raised / cause_obj.goal_amount * 100) if cause_obj.goal_amount else 0
-        })
+        try:
+            # Ensure required fields exist
+            if "creator_id" not in cause:
+                cause["creator_id"] = "unknown"
+            if "creator_type" not in cause:
+                cause["creator_type"] = "unknown"
+            if "creator_name" not in cause:
+                cause["creator_name"] = "Unknown Creator"
+            if "creator_website" not in cause:
+                cause["creator_website"] = None
+                
+            cause_obj = Cause(**cause)
+            
+            # Get contribution breakdown for this cause
+            contributions = await db.direct_contributions.find({"cause_id": cause["id"]}).to_list(1000)
+            
+            contributor_stats = {
+                "total_contributors": len(set([c.get("customer_id") for c in contributions if c.get("customer_id")])),
+                "anonymous_contributions": len([c for c in contributions if not c.get("customer_id")]),
+                "recent_contributions": len([c for c in contributions if datetime.fromisoformat(c["timestamp"].replace('Z', '+00:00')) > datetime.utcnow() - timedelta(days=7)])
+            }
+            
+            leaderboard.append({
+                "rank": rank,
+                "cause": cause_obj,
+                "metric_value": getattr(cause_obj, metric),
+                "contributor_stats": contributor_stats,
+                "progress_percentage": (cause_obj.total_raised / cause_obj.goal_amount * 100) if cause_obj.goal_amount else 0
+            })
+        except Exception as e:
+            print(f"Error processing cause {cause.get('id', 'unknown')} in leaderboard: {e}")
+            continue
     
     return {
         "metric": metric,
