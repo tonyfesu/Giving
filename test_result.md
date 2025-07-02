@@ -162,11 +162,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Built dashboard API showing total sales, impact, cause breakdown, and recent transactions"
+      - working: true
+        agent: "testing"
+        comment: "Dashboard API works correctly, showing accurate sales, impact amounts, and cause breakdowns. Both private dashboard and public impact views function as expected."
 
 frontend:
   - task: "Beautiful landing page with hero section and features"
