@@ -261,20 +261,7 @@ backend:
         agent: "testing"
         comment: "External API system works correctly. Businesses can use their API keys to create transactions and retrieve impact data. Public API for causes is also working."
 
-  - task: "Enhanced cause management with goals and categories"
-    implemented: true
-    working: true
-    file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: true
-        agent: "main"
-        comment: "Enhanced causes with fundraising goals, progress tracking, and featured status"
-      - working: true
-        agent: "testing"
-        comment: "Enhanced cause management works correctly. Causes can be filtered by active_only and featured_only. New causes can be created with goals and categories."
+
 
 frontend:
   - task: "Beautiful landing page with hero section and features"
