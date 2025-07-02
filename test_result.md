@@ -429,8 +429,7 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus:
-    - "Verification of 10 sample data for 5 different causes and users"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
