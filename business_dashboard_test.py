@@ -402,6 +402,14 @@ def test_emoji_reactions():
     initial_reactions = response.json()
     print(f"Initial reaction counts: {initial_reactions['reaction_counts']}")
     
+    # First, get a valid customer ID
+    response = requests.get(f"{API_URL}/customers")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    customers = response.json()
+    assert len(customers) > 0, "Expected at least one customer"
+    customer_id = customers[0]["id"]
+    customer_name = customers[0]["name"]
+    
     # Add a reaction
     reaction_data = {
         "emoji": "❤️"
@@ -409,7 +417,7 @@ def test_emoji_reactions():
     
     response = requests.post(
         f"{API_URL}/causes/{cause_id}/reactions", 
-        params={"user_id": "test_user", "user_name": "Test User"},
+        params={"user_id": customer_id, "user_name": customer_name, "user_type": "customer"},
         json=reaction_data
     )
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
@@ -423,8 +431,8 @@ def test_emoji_reactions():
     assert updated_reactions["reaction_counts"]["❤️"] >= 1, "Expected at least one heart reaction"
     
     # Verify user reaction is tracked
-    assert "test_user" in updated_reactions["user_reactions"], "User reaction not tracked"
-    assert updated_reactions["user_reactions"]["test_user"] == "❤️", f"Expected user reaction '❤️', got {updated_reactions['user_reactions']['test_user']}"
+    assert customer_id in updated_reactions["user_reactions"], "User reaction not tracked"
+    assert updated_reactions["user_reactions"][customer_id] == "❤️", f"Expected user reaction '❤️', got {updated_reactions['user_reactions'][customer_id]}"
     
     # Change reaction
     reaction_data = {
@@ -433,7 +441,7 @@ def test_emoji_reactions():
     
     response = requests.post(
         f"{API_URL}/causes/{cause_id}/reactions", 
-        params={"user_id": "test_user", "user_name": "Test User"},
+        params={"user_id": customer_id, "user_name": customer_name, "user_type": "customer"},
         json=reaction_data
     )
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
@@ -447,10 +455,10 @@ def test_emoji_reactions():
     assert updated_reactions["reaction_counts"]["👍"] >= 1, "Expected at least one thumbs up reaction"
     
     # Verify user reaction was updated
-    assert updated_reactions["user_reactions"]["test_user"] == "👍", f"Expected user reaction '👍', got {updated_reactions['user_reactions']['test_user']}"
+    assert updated_reactions["user_reactions"][customer_id] == "👍", f"Expected user reaction '👍', got {updated_reactions['user_reactions'][customer_id]}"
     
     # Delete reaction
-    response = requests.delete(f"{API_URL}/causes/{cause_id}/reactions", params={"user_id": "test_user"})
+    response = requests.delete(f"{API_URL}/causes/{cause_id}/reactions", params={"user_id": customer_id})
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
     
     # Get final reactions
@@ -458,7 +466,7 @@ def test_emoji_reactions():
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
     
     final_reactions = response.json()
-    assert "test_user" not in final_reactions["user_reactions"], "User reaction should have been deleted"
+    assert customer_id not in final_reactions["user_reactions"], "User reaction should have been deleted"
     
     print(f"Successfully tested emoji reactions for cause: {business_causes[0]['name']}")
     
