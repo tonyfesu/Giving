@@ -1492,10 +1492,10 @@ async def get_sdk_information():
                 "docs": "https://docs.nnoboa.com/sdk/javascript"
             },
             "python": {
-                "name": "ImpactLink Python SDK",
+                "name": "Nnoboa Python SDK",
                 "version": "1.0.0",
-                "install": "pip install impactlink-python",
-                "docs": "https://docs.impactlink.com/sdk/python"
+                "install": "pip install nnoboa-python",
+                "docs": "https://docs.nnoboa.com/sdk/python"
             },
             "php": {
                 "name": "ImpactLink PHP SDK",
