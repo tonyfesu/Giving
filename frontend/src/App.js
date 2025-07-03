@@ -163,6 +163,11 @@ const CauseBrowser = () => {
   
   const { currentUser, userType } = useUser();
 
+  const handleCauseCreated = () => {
+    fetchCauses(); // Refresh the causes list
+    setShowCreateCause(false); // Close the modal
+  };
+
   useEffect(() => {
     fetchCauses();
   }, [filters]);
