@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Build ImpactLink - a platform that enables businesses to drive social change through commerce by connecting sales to social causes with transparent impact tracking"
+user_problem_statement: "Build Nnoboa - a platform that enables businesses to drive social change through commerce by connecting sales to social causes with transparent impact tracking"
 
 backend:
   - task: "Business registration and management API"
