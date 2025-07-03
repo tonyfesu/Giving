@@ -2306,24 +2306,54 @@ async def get_impact_dashboard(business_id: str):
         {"business_id": business_id}
     ).sort("timestamp", -1).limit(10).to_list(10)
     
+    # Initialize dictionaries for tracking contributions and breakdowns
     cause_breakdown = {}
+    contributions_per_cause = {}
+    
     for cause_id, percentage in business_obj.impact_allocations.items():
         cause = await db.causes.find_one({"id": cause_id})
         if cause:
             cause_obj = Cause(**cause)
+            
+            # Calculate business contributions via transactions
+            business_contribution = (business_obj.total_sales * percentage) / 100
+            
+            # Calculate direct contributions to this cause
+            direct_contributions = await db.direct_contributions.find({"cause_id": cause_id}).to_list(1000)
+            direct_contribution_total = sum([c.get("amount", 0) for c in direct_contributions])
+            
+            # Calculate cause health metrics
+            goal_amount = cause_obj.goal_amount if cause_obj.goal_amount else 1000  # Default goal
+            progress_percentage = (cause_obj.total_raised / goal_amount * 100) if goal_amount > 0 else 0
+            health_status = "excellent" if progress_percentage >= 80 else "good" if progress_percentage >= 50 else "needs_attention"
+            
+            contributions_per_cause[cause_id] = {
+                "cause_name": cause_obj.name,
+                "business_contribution": business_contribution,
+                "direct_contributions": direct_contribution_total,
+                "total_raised": cause_obj.total_raised,
+                "goal_amount": goal_amount,
+                "progress_percentage": progress_percentage,
+                "health_status": health_status,
+                "impact_units": cause_obj.total_impact_units
+            }
+            
             cause_breakdown[cause_id] = {
                 "name": cause_obj.name,
                 "percentage": percentage,
                 "category": cause_obj.category,
                 "impact_metric": cause_obj.impact_metric,
-                "total_contribution": (business_obj.total_sales * percentage) / 100,
-                "expired": cause_obj.expired
+                "total_contribution": business_contribution,
+                "expired": cause_obj.expired,
+                "amount": business_contribution,
+                "impact_units": business_contribution / cause_obj.cost_per_impact if cause_obj.cost_per_impact > 0 else 0
             }
     
     return {
         "business": business_obj,
         "recent_transactions": [Transaction(**t) for t in recent_transactions],
         "cause_breakdown": cause_breakdown,
+        "contributions_per_cause": contributions_per_cause,  # Enhanced field
         "total_sales": business_obj.total_sales,
         "total_impact": business_obj.total_impact,
         "impact_percentage": (business_obj.total_impact / business_obj.total_sales * 100) if business_obj.total_sales > 0 else 0,
