@@ -1486,10 +1486,10 @@ async def get_sdk_information():
     return {
         "sdks": {
             "javascript": {
-                "name": "ImpactLink JS SDK",
+                "name": "Nnoboa JS SDK",
                 "version": "1.0.0",
-                "install": "npm install @impactlink/js-sdk",
-                "docs": "https://docs.impactlink.com/sdk/javascript"
+                "install": "npm install @nnoboa/js-sdk",
+                "docs": "https://docs.nnoboa.com/sdk/javascript"
             },
             "python": {
                 "name": "ImpactLink Python SDK",
