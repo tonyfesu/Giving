@@ -2571,6 +2571,28 @@ const PostRegistrationSubscription = ({ userData, userType, onSubscriptionComple
     papss_reference: ""
   });
   const [paymentErrors, setPaymentErrors] = useState({});
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [paymentData, setPaymentData] = useState({
+    card_number: "",
+    expiry_month: "",
+    expiry_year: "",
+    cvv: "",
+    cardholder_name: "",
+    
+    // Mobile Money
+    phone_number: "",
+    provider: "mtn",
+    
+    // Bank Transfer
+    bank_name: "",
+    account_number: "",
+    routing_number: "",
+    
+    // PAPSS
+    papss_reference: ""
+  });
+  const [paymentErrors, setPaymentErrors] = useState({});
   
   useEffect(() => {
     fetchSubscriptionPlans();
