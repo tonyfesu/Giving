@@ -2261,7 +2261,9 @@ async def add_cause_reaction(cause_id: str, reaction_data: EmojiReactionCreate):
             {"cause_id": cause_id, "user_id": user_id},
             {"$set": {"emoji": reaction_data.emoji, "created_at": datetime.utcnow()}}
         )
-        return {"message": "Reaction updated successfully", "emoji": reaction_data.emoji}
+        # Return the updated reaction
+        updated_reaction = await db.emoji_reactions.find_one({"cause_id": cause_id, "user_id": user_id})
+        return EmojiReaction(**updated_reaction)
     else:
         # Create new reaction
         reaction = {
@@ -2274,7 +2276,7 @@ async def add_cause_reaction(cause_id: str, reaction_data: EmojiReactionCreate):
         }
         
         await db.emoji_reactions.insert_one(reaction)
-        return {"message": "Reaction added successfully", "emoji": reaction_data.emoji}
+        return EmojiReaction(**reaction)
 
 @api_router.delete("/causes/{cause_id}/reactions")
 async def remove_cause_reaction(cause_id: str, user_data: dict):
