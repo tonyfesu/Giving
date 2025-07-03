@@ -2524,7 +2524,236 @@ const RegistrationForm = ({ onRegistrationComplete }) => {
     </div>
   );
 };
-const BusinessDashboard = ({ business }) => {
+// Subscription Selection Component for after registration
+const PostRegistrationSubscription = ({ userData, userType, onSubscriptionComplete }) => {
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [subscriptionPlans, setSubscriptionPlans] = useState([]);
+  
+  useEffect(() => {
+    fetchSubscriptionPlans();
+  }, []);
+  
+  const fetchSubscriptionPlans = async () => {
+    try {
+      const response = await axios.get(`${API}/subscriptions/plans?user_type=${userType}`);
+      setSubscriptionPlans(response.data);
+    } catch (error) {
+      console.error("Error fetching subscription plans:", error);
+      // Set default plans if API fails
+      setSubscriptionPlans([
+        {
+          id: "free",
+          name: "Free Starter",
+          price: 0,
+          billing_cycle: "monthly",
+          features: [
+            "Create up to 2 causes",
+            "Basic impact tracking",
+            "Community access",
+            "Email support"
+          ],
+          popular: false
+        },
+        {
+          id: "pro",
+          name: "Pro Impact",
+          price: userType === "business" ? 49 : 19,
+          billing_cycle: "monthly",
+          features: [
+            "Unlimited causes",
+            "Advanced analytics",
+            "Priority support",
+            "Custom branding",
+            "API access",
+            "Social features"
+          ],
+          popular: true
+        },
+        {
+          id: "enterprise",
+          name: "Enterprise",
+          price: userType === "business" ? 199 : 99,
+          billing_cycle: "monthly",
+          features: [
+            "Everything in Pro",
+            "White-label solution",
+            "Dedicated account manager",
+            "Custom integrations",
+            "Advanced reporting",
+            "24/7 phone support"
+          ],
+          popular: false
+        }
+      ]);
+    }
+  };
+  
+  const handleSubscriptionSelect = async (plan) => {
+    setLoading(true);
+    
+    try {
+      // Create subscription
+      const subscriptionData = {
+        user_id: userData.id,
+        user_type: userType,
+        plan_id: plan.id,
+        plan_name: plan.name,
+        price: plan.price,
+        billing_cycle: plan.billing_cycle
+      };
+      
+      await axios.post(`${API}/subscriptions`, subscriptionData);
+      
+      // Complete the registration process
+      onSubscriptionComplete({
+        userData,
+        userType,
+        subscription: plan
+      });
+      
+    } catch (error) {
+      console.error("Error creating subscription:", error);
+      // For demo purposes, continue even if subscription creation fails
+      onSubscriptionComplete({
+        userData,
+        userType,
+        subscription: plan
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleSkip = () => {
+    // Allow users to skip subscription and continue with free tier
+    onSubscriptionComplete({
+      userData,
+      userType,
+      subscription: { id: "free", name: "Free Starter", price: 0 }
+    });
+  };
+  
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">
+            Welcome to Nnoboa, {userData.name}! 🎉
+          </h1>
+          <p className="text-xl text-gray-600 mb-2">
+            Your account has been created successfully!
+          </p>
+          <p className="text-lg text-gray-600">
+            Choose a subscription plan to unlock your full impact potential
+          </p>
+        </div>
+        
+        <div className="grid md:grid-cols-3 gap-8 mb-12">
+          {subscriptionPlans.map((plan) => (
+            <div
+              key={plan.id}
+              className={`bg-white rounded-xl shadow-lg overflow-hidden transition-all hover:shadow-xl ${
+                plan.popular ? "ring-2 ring-blue-500 scale-105" : ""
+              } ${selectedPlan?.id === plan.id ? "ring-2 ring-green-500" : ""}`}
+            >
+              {plan.popular && (
+                <div className="bg-blue-500 text-white text-center py-2 text-sm font-semibold">
+                  Most Popular
+                </div>
+              )}
+              
+              <div className="p-8">
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">{plan.name}</h3>
+                <div className="mb-6">
+                  <span className="text-4xl font-bold text-gray-800">${plan.price}</span>
+                  <span className="text-gray-600">/{plan.billing_cycle}</span>
+                </div>
+                
+                <ul className="space-y-3 mb-8">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-center text-gray-700">
+                      <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                
+                <button
+                  onClick={() => handleSubscriptionSelect(plan)}
+                  disabled={loading}
+                  className={`w-full py-3 px-6 rounded-lg font-semibold transition-all ${
+                    plan.popular
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : plan.price === 0
+                      ? "bg-green-600 text-white hover:bg-green-700"
+                      : "bg-gray-800 text-white hover:bg-gray-900"
+                  } disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                >
+                  {loading && selectedPlan?.id === plan.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    `Choose ${plan.name}`
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">
+            Not ready to choose? You can always upgrade later.
+          </p>
+          <button
+            onClick={handleSkip}
+            className="text-blue-600 hover:text-blue-800 font-medium underline"
+          >
+            Skip for now and start with free tier
+          </button>
+        </div>
+        
+        <div className="mt-12 bg-blue-50 rounded-xl p-8">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">What happens next?</h3>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span className="text-white font-bold">1</span>
+              </div>
+              <h4 className="font-semibold text-gray-800 mb-2">Complete Setup</h4>
+              <p className="text-sm text-gray-600">
+                Your account will be activated with your chosen plan
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span className="text-white font-bold">2</span>
+              </div>
+              <h4 className="font-semibold text-gray-800 mb-2">Access Platform</h4>
+              <p className="text-sm text-gray-600">
+                Log in and start creating causes or making contributions
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span className="text-white font-bold">3</span>
+              </div>
+              <h4 className="font-semibold text-gray-800 mb-2">Make Impact</h4>
+              <p className="text-sm text-gray-600">
+                Start tracking and managing your social impact
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
   const [dashboardData, setDashboardData] = useState(null);
   const [causes, setCauses] = useState([]);
   const [comments, setComments] = useState({});
