@@ -47,7 +47,7 @@ const DemoUserSelector = ({ onUserSelect }) => {
           Demo Platform Access
         </h2>
         <p className="text-gray-600 mb-8 text-center">
-          Choose a demo account to explore ImpactLink's features
+          Choose a demo account to explore Nnoboa's features
         </p>
 
         <div className="grid md:grid-cols-3 gap-6">
