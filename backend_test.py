@@ -1493,6 +1493,23 @@ if __name__ == "__main__":
     run_test("External Business Impact", test_external_business_impact)
     run_test("External Causes", test_external_causes)
     
+    # Social Features
+    print("\n===== TESTING SOCIAL FEATURES =====")
+    run_test("Share Feature", test_share_feature)
+    run_test("Comments System", test_comments_system)
+    run_test("Emoji Reactions", test_emoji_reactions)
+    
+    # Developer Platform
+    print("\n===== TESTING DEVELOPER PLATFORM =====")
+    run_test("Developer Documentation", test_dev_docs)
+    run_test("SDK Information", test_dev_sdk)
+    run_test("Code Examples", test_dev_code_examples)
+    
+    # Enhanced Business Dashboard and Admin Settlements
+    print("\n===== TESTING ENHANCED BUSINESS DASHBOARD AND ADMIN SETTLEMENTS =====")
+    run_test("Enhanced Business Dashboard", test_enhanced_business_dashboard)
+    run_test("Admin Settlements", test_admin_settlements)
+    
     # Complex Scenarios
     print("\n===== TESTING COMPLEX SCENARIOS =====")
     run_test("Customer Contribution Badge Flow", test_customer_contribution_badge_flow)
