@@ -4179,10 +4179,10 @@ function AppContent() {
                     Try Demo Platform
                   </button>
                   <button
-                    onClick={() => setCurrentView("business-setup")}
+                    onClick={() => setCurrentView("register")}
                     className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-12 py-4 rounded-full font-semibold text-xl hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all shadow-xl"
                   >
-                    Register Business
+                    Register Now
                   </button>
                 </div>
               </div>
