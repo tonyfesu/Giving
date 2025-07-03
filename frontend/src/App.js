@@ -2249,6 +2249,8 @@ function AppContent() {
         );
       case "causes":
         return <CauseBrowser />;
+      case "create-cause":
+        return currentUser ? <CreateCauseForm /> : <div>Please log in to create a cause</div>;
       case "leaderboards":
         return <LeaderboardSection />;
       case "admin":
