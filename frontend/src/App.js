@@ -5029,6 +5029,29 @@ function AppContent() {
   };
 
   const handleSubscriptionComplete = (data) => {
+    // Check if payment is required
+    if (data.requiresPayment && data.selectedPlan) {
+      // Store the data and redirect to payment
+      setRegistrationData({
+        userData: data.userData,
+        userType: data.userType,
+        selectedPlan: data.selectedPlan
+      });
+      setCurrentView("payment");
+    } else {
+      // Free plan or payment not required - complete registration
+      setCurrentUser(data.userData);
+      setUserType(data.userType);
+      if (data.userType === "business") {
+        setBusiness(data.userData);
+      }
+      setRegistrationData(null);
+      setCurrentView("home");
+    }
+  };
+
+  const handlePaymentComplete = (data) => {
+    // Payment completed successfully - log user in
     setCurrentUser(data.userData);
     setUserType(data.userType);
     if (data.userType === "business") {
