@@ -285,6 +285,42 @@ class UserCauseCreate(BaseModel):
     volunteer_opportunities: List[str] = Field(default_factory=list)
     settlement_info: SettlementInfo
 
+# Social Features Models
+class CauseComment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    cause_id: str
+    user_id: str
+    user_name: str
+    user_type: str  # customer, business, admin
+    comment: str
+    parent_comment_id: Optional[str] = None  # For replies
+    is_admin_response: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+
+class CommentCreate(BaseModel):
+    comment: str
+    parent_comment_id: Optional[str] = None
+
+class EmojiReaction(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    cause_id: str
+    user_id: str
+    user_name: str
+    emoji: str  # ❤️, 👍, 🎉, 😢, 😡, etc.
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class EmojiReactionCreate(BaseModel):
+    emoji: str
+
+class CauseShare(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    cause_id: str
+    share_url: str
+    shared_by: Optional[str] = None
+    platform: Optional[str] = None  # facebook, twitter, email, link
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
 # Subscription plans
 SUBSCRIPTION_PLANS = {
     "individual": {
