@@ -201,7 +201,8 @@ def test_comment_system():
     
     # Add a comment as if from a customer
     response = requests.post(
-        f"{API_URL}/causes/{cause_id}/comments?user_id=test_customer&user_name=Test Customer&user_type=customer", 
+        f"{API_URL}/causes/{cause_id}/comments", 
+        params={"user_id": "test_customer", "user_name": "Test Customer", "user_type": "customer"},
         json=comment_data
     )
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
@@ -217,7 +218,8 @@ def test_comment_system():
     }
     
     response = requests.post(
-        f"{API_URL}/causes/{cause_id}/comments?user_id={business_id}&user_name={business_causes[0]['creator_name']}&user_type=business", 
+        f"{API_URL}/causes/{cause_id}/comments", 
+        params={"user_id": business_id, "user_name": business_causes[0]["creator_name"], "user_type": "business"},
         json=reply_data
     )
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
