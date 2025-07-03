@@ -2571,9 +2571,6 @@ const PostRegistrationSubscription = ({ userData, userType, onSubscriptionComple
     papss_reference: ""
   });
   const [paymentErrors, setPaymentErrors] = useState({});
-  const [showPayment, setShowPayment] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("card");
-  const [paymentData, setPaymentData] = useState({
     card_number: "",
     expiry_month: "",
     expiry_year: "",
