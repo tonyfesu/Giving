@@ -3153,7 +3153,7 @@ const PostRegistrationSubscription = ({ userData, userType, onSubscriptionComple
                 </ul>
                 
                 <button
-                  onClick={() => handleSubscriptionSelect(plan)}
+                  onClick={() => handlePlanSelect(plan)}
                   disabled={loading}
                   className={`w-full py-3 px-6 rounded-lg font-semibold transition-all ${
                     plan.popular
