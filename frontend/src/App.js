@@ -1604,7 +1604,360 @@ const FeaturesSection = () => {
 // Placeholder components for brevity
 const CustomerRegistration = ({ onCustomerCreate }) => <div></div>;
 const BusinessSetup = ({ onBusinessCreate }) => <div></div>;
-const BusinessDashboard = ({ business }) => <div></div>;
+const BusinessDashboard = ({ business }) => {
+  const [dashboardData, setDashboardData] = useState(null);
+  const [causes, setCauses] = useState([]);
+  const [comments, setComments] = useState({});
+  const [selectedTab, setSelectedTab] = useState("overview");
+  const [loading, setLoading] = useState(true);
+  const [replyText, setReplyText] = useState("");
+  const [replyingTo, setReplyingTo] = useState(null);
+  const { currentUser, userType } = useUser();
+
+  useEffect(() => {
+    if (business) {
+      fetchDashboardData();
+      fetchBusinessCauses();
+    }
+  }, [business]);
+
+  const fetchDashboardData = async () => {
+    try {
+      const response = await axios.get(`${API}/impact/dashboard/${business.id}`);
+      setDashboardData(response.data);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBusinessCauses = async () => {
+    try {
+      const response = await axios.get(`${API}/causes?creator_type=business&creator_id=${business.id}&active_only=false`);
+      setCauses(response.data);
+      
+      // Fetch comments for each cause
+      for (const cause of response.data) {
+        fetchCauseComments(cause.id);
+      }
+    } catch (error) {
+      console.error("Error fetching business causes:", error);
+    }
+  };
+
+  const fetchCauseComments = async (causeId) => {
+    try {
+      const response = await axios.get(`${API}/causes/${causeId}/comments`);
+      setComments(prev => ({
+        ...prev,
+        [causeId]: response.data
+      }));
+    } catch (error) {
+      console.error("Error fetching cause comments:", error);
+    }
+  };
+
+  const replyToComment = async (causeId, parentCommentId, replyText) => {
+    if (!replyText.trim()) return;
+
+    try {
+      await axios.post(`${API}/causes/${causeId}/comments?user_id=${business.id}&user_type=business`, {
+        comment: replyText,
+        parent_comment_id: parentCommentId
+      });
+      
+      setReplyText("");
+      setReplyingTo(null);
+      fetchCauseComments(causeId);
+    } catch (error) {
+      console.error("Error replying to comment:", error);
+    }
+  };
+
+  const getCauseHealth = (cause) => {
+    const progressPercentage = cause.goal_amount ? (cause.total_raised / cause.goal_amount) * 100 : 0;
+    const daysRemaining = cause.end_date ? Math.ceil((new Date(cause.end_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+    const isExpired = cause.expired || (daysRemaining !== null && daysRemaining <= 0);
+    
+    if (isExpired) return { status: "expired", color: "red", text: "Expired" };
+    if (progressPercentage >= 100) return { status: "completed", color: "green", text: "Goal Reached" };
+    if (progressPercentage >= 75) return { status: "excellent", color: "green", text: "Excellent" };
+    if (progressPercentage >= 50) return { status: "good", color: "yellow", text: "Good" };
+    if (progressPercentage >= 25) return { status: "fair", color: "orange", text: "Fair" };
+    return { status: "poor", color: "red", text: "Needs Attention" };
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg text-gray-600">Loading dashboard...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto p-6">
+      <div className="bg-white rounded-xl shadow-lg">
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-3xl font-bold text-gray-800">Business Dashboard</h1>
+          <p className="text-gray-600 mt-2">Welcome back, {business.name}</p>
+        </div>
+
+        <div className="p-6">
+          <div className="mb-6">
+            <div className="flex border-b border-gray-200">
+              <button
+                onClick={() => setSelectedTab("overview")}
+                className={`px-4 py-2 font-medium ${selectedTab === "overview" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600"}`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setSelectedTab("causes")}
+                className={`px-4 py-2 font-medium ${selectedTab === "causes" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600"}`}
+              >
+                My Causes
+              </button>
+              <button
+                onClick={() => setSelectedTab("comments")}
+                className={`px-4 py-2 font-medium ${selectedTab === "comments" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600"}`}
+              >
+                Comments & Responses
+              </button>
+            </div>
+          </div>
+
+          {selectedTab === "overview" && dashboardData && (
+            <div className="space-y-6">
+              {/* Key Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-blue-800">Total Sales</h3>
+                  <p className="text-2xl font-bold text-blue-600">${dashboardData.total_sales?.toFixed(2) || '0.00'}</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-green-800">Total Impact</h3>
+                  <p className="text-2xl font-bold text-green-600">${dashboardData.total_impact?.toFixed(2) || '0.00'}</p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-purple-800">My Causes</h3>
+                  <p className="text-2xl font-bold text-purple-600">{causes.length}</p>
+                </div>
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-orange-800">Impact Rate</h3>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {dashboardData.impact_percentage?.toFixed(1) || '0'}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Cause Breakdown */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Impact Allocation Breakdown</h3>
+                {dashboardData.cause_breakdown && Object.keys(dashboardData.cause_breakdown).length > 0 ? (
+                  <div className="space-y-3">
+                    {Object.entries(dashboardData.cause_breakdown).map(([causeId, causeData]) => (
+                      <div key={causeId} className="flex justify-between items-center bg-gray-50 rounded-lg p-3">
+                        <div>
+                          <span className="font-medium text-gray-800">{causeData.name}</span>
+                          <span className="text-gray-600 text-sm ml-2">({causeData.category})</span>
+                          {causeData.expired && <span className="text-red-600 text-sm ml-2">[Expired]</span>}
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-blue-600">{causeData.percentage}%</div>
+                          <div className="text-sm text-gray-500">${causeData.total_contribution?.toFixed(2) || '0.00'}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No impact allocation set up yet.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {selectedTab === "causes" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-6">
+                {causes.length > 0 ? causes.map((cause) => {
+                  const health = getCauseHealth(cause);
+                  const progressPercentage = cause.goal_amount ? (cause.total_raised / cause.goal_amount) * 100 : 0;
+                  const daysRemaining = cause.end_date ? Math.ceil((new Date(cause.end_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+                  
+                  return (
+                    <div key={cause.id} className="border border-gray-200 rounded-lg p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-bold text-gray-800">{cause.name}</h3>
+                        <span className={`px-3 py-1 rounded-full text-white text-sm font-medium bg-${health.color}-500`}>
+                          {health.text}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                          <p className="text-sm text-gray-600">Total Raised</p>
+                          <p className="text-lg font-bold text-green-600">${cause.total_raised.toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Goal Progress</p>
+                          <p className="text-lg font-bold text-blue-600">{progressPercentage.toFixed(1)}%</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Days Remaining</p>
+                          <p className={`text-lg font-bold ${daysRemaining && daysRemaining > 0 ? 'text-orange-600' : 'text-red-600'}`}>
+                            {daysRemaining && daysRemaining > 0 ? `${daysRemaining} days` : 'Ended'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="mb-4">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-green-500 h-2 rounded-full transition-all" 
+                            style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {/* Comments Summary */}
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-sm text-gray-600">
+                          <strong>Comments:</strong> {comments[cause.id]?.total_comments || 0} total
+                        </p>
+                        {comments[cause.id] && comments[cause.id].comments?.length > 0 && (
+                          <p className="text-sm text-gray-600">
+                            Latest: "{comments[cause.id].comments[comments[cause.id].comments.length - 1]?.comment?.comment?.substring(0, 50)}..."
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 mb-4">You haven't created any causes yet.</p>
+                    <button
+                      onClick={() => window.location.hash = 'create-cause'}
+                      className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+                    >
+                      Create Your First Cause
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {selectedTab === "comments" && (
+            <div className="space-y-6">
+              {causes.map((cause) => {
+                const causeComments = comments[cause.id];
+                if (!causeComments || causeComments.total_comments === 0) return null;
+
+                return (
+                  <div key={cause.id} className="border border-gray-200 rounded-lg p-6">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">{cause.name}</h3>
+                    
+                    <div className="space-y-4">
+                      {causeComments.comments?.map((commentGroup) => (
+                        <div key={commentGroup.comment.id} className="space-y-2">
+                          {/* Main Comment */}
+                          <div className="bg-gray-50 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-medium text-gray-800">{commentGroup.comment.user_name}</span>
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                                commentGroup.comment.user_type === 'business' ? 'bg-blue-100 text-blue-800' :
+                                commentGroup.comment.user_type === 'customer' ? 'bg-green-100 text-green-800' :
+                                'bg-purple-100 text-purple-800'
+                              }`}>
+                                {commentGroup.comment.user_type}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {new Date(commentGroup.comment.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-gray-700 mb-2">{commentGroup.comment.comment}</p>
+                            
+                            {/* Reply Button */}
+                            <button
+                              onClick={() => setReplyingTo(replyingTo === commentGroup.comment.id ? null : commentGroup.comment.id)}
+                              className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              {replyingTo === commentGroup.comment.id ? 'Cancel Reply' : 'Reply'}
+                            </button>
+
+                            {/* Reply Form */}
+                            {replyingTo === commentGroup.comment.id && (
+                              <div className="mt-3 flex gap-2">
+                                <input
+                                  type="text"
+                                  value={replyText}
+                                  onChange={(e) => setReplyText(e.target.value)}
+                                  placeholder="Write your reply..."
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      replyToComment(cause.id, commentGroup.comment.id, replyText);
+                                    }
+                                  }}
+                                />
+                                <button
+                                  onClick={() => replyToComment(cause.id, commentGroup.comment.id, replyText)}
+                                  className="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600"
+                                >
+                                  Reply
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Replies */}
+                          {commentGroup.replies?.map((reply) => (
+                            <div key={reply.id} className={`ml-6 p-2 rounded-lg ${reply.is_admin_response ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-gray-100'}`}>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-sm text-gray-800">{reply.user_name}</span>
+                                <span className={`px-2 py-1 rounded-full text-xs ${
+                                  reply.user_type === 'business' ? 'bg-blue-100 text-blue-800' :
+                                  reply.user_type === 'customer' ? 'bg-green-100 text-green-800' :
+                                  'bg-purple-100 text-purple-800'
+                                }`}>
+                                  {reply.user_type}
+                                </span>
+                                {reply.is_admin_response && (
+                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                                    ✅ You
+                                  </span>
+                                )}
+                                <span className="text-xs text-gray-500">
+                                  {new Date(reply.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-700">{reply.comment}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {causes.every(cause => !comments[cause.id] || comments[cause.id].total_comments === 0) && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No comments on your causes yet.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // User Cause Creation Component
 const CreateCauseForm = () => {
