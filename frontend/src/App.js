@@ -995,6 +995,16 @@ const CauseBrowser = () => {
             userType={userType}
           />
         )}
+        
+        {/* Create Cause Modal */}
+        {showCreateCause && (
+          <CreateCauseModal 
+            onClose={() => setShowCreateCause(false)}
+            onCauseCreated={handleCauseCreated}
+            currentUser={currentUser}
+            userType={userType}
+          />
+        )}
       </div>
     </div>
   );
