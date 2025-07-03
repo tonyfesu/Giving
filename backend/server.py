@@ -1648,7 +1648,7 @@ comment = client.causes.add_comment(
             """
         },
         "php": {
-            "install": "composer require impactlink/php-sdk",
+            "install": "composer require nnoboa/php-sdk",
             "setup": """
 <?php
 require_once 'vendor/autoload.php';
