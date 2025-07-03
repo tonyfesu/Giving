@@ -2062,10 +2062,10 @@ async def get_demo_users():
 @api_router.get("/admin/settlements")
 async def get_admin_settlements():
     # Settlement overview
-    settlements = await db.cause_settlements.find().to_list(1000)
+    settlements = await db.cause_settlements.find({}, {"_id": 0}).to_list(1000)
     if not settlements:
         # If no settlements, create them based on existing causes
-        causes = await db.causes.find().to_list(1000)
+        causes = await db.causes.find({}, {"_id": 0}).to_list(1000)
         for cause in causes:
             # Calculate direct donations for this cause
             direct_donations = await db.direct_contributions.aggregate([
@@ -2092,12 +2092,12 @@ async def get_admin_settlements():
             await db.cause_settlements.insert_one(settlement.dict())
         
         # Fetch settlements again
-        settlements = await db.cause_settlements.find().to_list(1000)
+        settlements = await db.cause_settlements.find({}, {"_id": 0}).to_list(1000)
     
     # Enhance settlement data with cause information
     enhanced_settlements = []
     for settlement in settlements:
-        cause = await db.causes.find_one({"id": settlement["cause_id"]})
+        cause = await db.causes.find_one({"id": settlement["cause_id"]}, {"_id": 0})
         if cause:
             enhanced_settlement = {
                 **settlement,
