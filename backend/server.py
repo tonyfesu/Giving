@@ -37,6 +37,13 @@ def create_api_key():
     """Generate a simple API key for demo purposes"""
     return f"nn_{uuid.uuid4().hex[:24]}"
 
+def generate_cause_code():
+    """Generate a unique cause code for USSD"""
+    import random
+    import string
+    # Generate a 6-character alphanumeric code
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
 def generate_account_number():
     """Generate a unique account number"""
     import random
