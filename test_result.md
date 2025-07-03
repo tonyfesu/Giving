@@ -305,9 +305,9 @@ backend:
     implemented: true
     working: false
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "testing"
@@ -315,6 +315,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "Comments system has issues. GET /api/causes/{cause_id}/comments works correctly, but POST /api/causes/{cause_id}/comments returns a 422 error. The endpoint appears to require user_id and user_type parameters that weren't documented."
+      - working: false
+        agent: "testing"
+        comment: "Comments system still has issues. GET /api/causes/{cause_id}/comments works correctly, but POST /api/causes/{cause_id}/comments returns a 404 Not Found error even when user_id and user_type are included in the request body."
 
   - task: "Emoji Reactions"
     implemented: true
