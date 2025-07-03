@@ -402,6 +402,18 @@ const CauseBrowser = () => {
           <p className="text-xl text-gray-600">
             Browse active and completed causes, filter by category, and make a direct impact
           </p>
+          
+          {/* Create Cause Button */}
+          {currentUser && (
+            <div className="mt-8">
+              <button
+                onClick={() => setShowCreateCause(true)}
+                className="bg-green-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-600 transition-all shadow-lg"
+              >
+                ➕ Create New Cause
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Filters */}
