@@ -1653,7 +1653,7 @@ comment = client.causes.add_comment(
 <?php
 require_once 'vendor/autoload.php';
 
-use ImpactLink\\Client;
+use Nnoboa\\Client;
 
 $client = new Client([
     'api_key' => 'your_api_key_here',
