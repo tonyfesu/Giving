@@ -1612,7 +1612,7 @@ contribution = client.contributions.create(
             """,
             "webhook_handler": """
 from flask import Flask, request
-import impactlink
+import nnoboa
 
 app = Flask(__name__)
 
