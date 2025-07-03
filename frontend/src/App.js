@@ -4507,7 +4507,7 @@ const DeveloperPlatform = () => {
 
 // Main App Content Component
 function AppContent() {
-  const [currentView, setCurrentView] = useState("demo");
+  const [currentView, setCurrentView] = useState("home");
   const [business, setBusiness] = useState(null);
   const [recentTransaction, setRecentTransaction] = useState(null);
   const [registrationData, setRegistrationData] = useState(null);
