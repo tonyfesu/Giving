@@ -2216,6 +2216,7 @@ async def get_cause_reactions(cause_id: str):
     
     return {
         "cause_id": cause_id,
+        "reactions": reaction_counts,  # Adding the 'reactions' field as expected by testing
         "reaction_counts": reaction_counts,
         "total_reactions": len(reactions),
         "user_reactions": user_reactions
