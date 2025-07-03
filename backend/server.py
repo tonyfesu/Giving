@@ -316,6 +316,8 @@ class EmojiReaction(BaseModel):
 
 class EmojiReactionCreate(BaseModel):
     emoji: str
+    user_id: str
+    user_type: str
 
 class CauseShare(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
