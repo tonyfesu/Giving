@@ -457,7 +457,7 @@ BADGES = {
     "business_pioneer": Badge(
         id="business_pioneer",
         name="Business Pioneer",
-        description="First business to join ImpactLink",
+        description="First business to join Nnoboa",
         icon="🚀",
         criteria={"type": "business_rank", "value": 1},
         rarity="legendary"
