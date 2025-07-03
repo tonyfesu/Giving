@@ -5078,6 +5078,17 @@ function AppContent() {
         ) : (
           <div>Error: No payment data found</div>
         );
+      case "payment":
+        return registrationData && registrationData.selectedPlan ? (
+          <PaymentPage
+            userData={registrationData.userData}
+            userType={registrationData.userType}
+            selectedPlan={registrationData.selectedPlan}
+            onPaymentComplete={handlePaymentComplete}
+          />
+        ) : (
+          <div>Error: No payment data found</div>
+        );
       case "customer-register":
         return <RegistrationForm onRegistrationComplete={handleRegistrationComplete} />;
       case "business-setup":
