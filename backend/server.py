@@ -2274,8 +2274,12 @@ async def add_cause_reaction(cause_id: str, reaction_data: EmojiReactionCreate):
         return {"message": "Reaction added successfully", "emoji": reaction_data.emoji}
 
 @api_router.delete("/causes/{cause_id}/reactions")
-async def remove_cause_reaction(cause_id: str, user_id: str):
+async def remove_cause_reaction(cause_id: str, user_data: dict):
     """Remove user's emoji reaction from a cause"""
+    user_id = user_data.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
     result = await db.emoji_reactions.delete_one({"cause_id": cause_id, "user_id": user_id})
     
     if result.deleted_count == 0:
