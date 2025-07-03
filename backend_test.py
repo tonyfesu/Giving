@@ -1128,6 +1128,312 @@ def test_comprehensive_flow():
     
     return True
 
+# ===== SOCIAL FEATURES TESTS =====
+
+def test_share_feature():
+    """Test GET and POST /api/causes/{cause_id}/share endpoints"""
+    # First get all causes
+    response = requests.get(f"{API_URL}/causes")
+    causes = response.json()
+    
+    # Make sure we have at least one cause
+    assert len(causes) > 0, "Need at least one cause for share test"
+    cause_id = causes[0]["id"]
+    
+    # Test GET share endpoint
+    response = requests.get(f"{API_URL}/causes/{cause_id}/share")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    share_data = response.json()
+    assert "share_url" in share_data, "Share response missing 'share_url' field"
+    assert "social_links" in share_data, "Share response missing 'social_links' field"
+    
+    # Verify social links
+    social_links = share_data["social_links"]
+    required_platforms = ["facebook", "twitter", "whatsapp", "linkedin", "email"]
+    for platform in required_platforms:
+        assert platform in social_links, f"Social links missing '{platform}' platform"
+        assert social_links[platform].startswith("http"), f"Social link for {platform} should be a URL"
+    
+    # Test POST share endpoint
+    share_post_data = {
+        "user_id": test_customer_id,
+        "platform": "facebook"
+    }
+    
+    response = requests.post(f"{API_URL}/causes/{cause_id}/share", json=share_post_data)
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    share_record = response.json()
+    assert "share_record" in share_record, "Share post response missing 'share_record' field"
+    assert "share_url" in share_record, "Share post response missing 'share_url' field"
+    assert "social_links" in share_record, "Share post response missing 'social_links' field"
+    
+    # Verify share record
+    record = share_record["share_record"]
+    assert "id" in record, "Share record missing 'id' field"
+    assert record["cause_id"] == cause_id, f"Expected cause_id {cause_id}, got {record['cause_id']}"
+    assert record["shared_by"] == test_customer_id, f"Expected shared_by {test_customer_id}, got {record['shared_by']}"
+    assert record["platform"] == "facebook", f"Expected platform 'facebook', got {record['platform']}"
+    
+    return True
+
+def test_comments_system():
+    """Test GET and POST /api/causes/{cause_id}/comments endpoints"""
+    # First get all causes
+    response = requests.get(f"{API_URL}/causes")
+    causes = response.json()
+    
+    # Make sure we have at least one cause
+    assert len(causes) > 0, "Need at least one cause for comments test"
+    cause_id = causes[0]["id"]
+    
+    # Test POST comment endpoint
+    comment_data = {
+        "comment": "This is a test comment",
+        "user_id": test_customer_id,
+        "user_type": "customer"
+    }
+    
+    response = requests.post(f"{API_URL}/causes/{cause_id}/comments", json=comment_data)
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    comment = response.json()
+    assert "id" in comment, "Comment response missing 'id' field"
+    assert comment["cause_id"] == cause_id, f"Expected cause_id {cause_id}, got {comment['cause_id']}"
+    assert comment["user_id"] == test_customer_id, f"Expected user_id {test_customer_id}, got {comment['user_id']}"
+    assert comment["comment"] == "This is a test comment", f"Expected comment 'This is a test comment', got {comment['comment']}"
+    assert comment["parent_comment_id"] is None, f"Expected parent_comment_id None, got {comment['parent_comment_id']}"
+    
+    # Store comment ID for reply test
+    comment_id = comment["id"]
+    
+    # Test POST reply endpoint
+    reply_data = {
+        "comment": "This is a test reply",
+        "parent_comment_id": comment_id,
+        "user_id": test_customer_id2,
+        "user_type": "customer"
+    }
+    
+    response = requests.post(f"{API_URL}/causes/{cause_id}/comments", json=reply_data)
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    reply = response.json()
+    assert reply["parent_comment_id"] == comment_id, f"Expected parent_comment_id {comment_id}, got {reply['parent_comment_id']}"
+    
+    # Test GET comments endpoint
+    response = requests.get(f"{API_URL}/causes/{cause_id}/comments")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    comments = response.json()
+    assert "comments" in comments, "Comments response missing 'comments' field"
+    assert len(comments["comments"]) >= 1, f"Expected at least 1 comment, got {len(comments['comments'])}"
+    
+    # Verify comment structure
+    found_comment = False
+    for c in comments["comments"]:
+        if c["id"] == comment_id:
+            found_comment = True
+            assert "replies" in c, "Comment missing 'replies' field"
+            assert len(c["replies"]) >= 1, f"Expected at least 1 reply, got {len(c['replies'])}"
+            break
+    
+    assert found_comment, f"Could not find our test comment (ID: {comment_id}) in the comments list"
+    
+    return True
+
+def test_emoji_reactions():
+    """Test GET, POST, and DELETE /api/causes/{cause_id}/reactions endpoints"""
+    # First get all causes
+    response = requests.get(f"{API_URL}/causes")
+    causes = response.json()
+    
+    # Make sure we have at least one cause
+    assert len(causes) > 0, "Need at least one cause for reactions test"
+    cause_id = causes[0]["id"]
+    
+    # Test POST reaction endpoint
+    reaction_data = {
+        "emoji": "❤️",
+        "user_id": test_customer_id,
+        "user_type": "customer"
+    }
+    
+    response = requests.post(f"{API_URL}/causes/{cause_id}/reactions", json=reaction_data)
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    reaction = response.json()
+    assert "id" in reaction, "Reaction response missing 'id' field"
+    assert reaction["cause_id"] == cause_id, f"Expected cause_id {cause_id}, got {reaction['cause_id']}"
+    assert reaction["user_id"] == test_customer_id, f"Expected user_id {test_customer_id}, got {reaction['user_id']}"
+    assert reaction["emoji"] == "❤️", f"Expected emoji '❤️', got {reaction['emoji']}"
+    
+    # Add another reaction from a different user
+    reaction_data = {
+        "emoji": "👍",
+        "user_id": test_customer_id2,
+        "user_type": "customer"
+    }
+    
+    response = requests.post(f"{API_URL}/causes/{cause_id}/reactions", json=reaction_data)
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    # Test GET reactions endpoint
+    response = requests.get(f"{API_URL}/causes/{cause_id}/reactions")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    reactions_data = response.json()
+    assert "reactions" in reactions_data, "Reactions response missing 'reactions' field"
+    assert "user_reactions" in reactions_data, "Reactions response missing 'user_reactions' field"
+    
+    reactions = reactions_data["reactions"]
+    assert "❤️" in reactions, "Reactions missing '❤️' emoji"
+    assert "👍" in reactions, "Reactions missing '👍' emoji"
+    assert reactions["❤️"] >= 1, f"Expected at least 1 heart reaction, got {reactions['❤️']}"
+    assert reactions["👍"] >= 1, f"Expected at least 1 thumbs up reaction, got {reactions['👍']}"
+    
+    # Test GET reactions with user_id
+    response = requests.get(f"{API_URL}/causes/{cause_id}/reactions?user_id={test_customer_id}")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    reactions_data = response.json()
+    user_reactions = reactions_data["user_reactions"]
+    assert len(user_reactions) >= 1, f"Expected at least 1 user reaction, got {len(user_reactions)}"
+    
+    # Test DELETE reaction endpoint
+    delete_data = {
+        "user_id": test_customer_id
+    }
+    
+    response = requests.delete(f"{API_URL}/causes/{cause_id}/reactions", json=delete_data)
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    # Verify reaction was deleted
+    response = requests.get(f"{API_URL}/causes/{cause_id}/reactions?user_id={test_customer_id}")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    reactions_data = response.json()
+    user_reactions = reactions_data["user_reactions"]
+    assert len(user_reactions) == 0, f"Expected 0 user reactions after delete, got {len(user_reactions)}"
+    
+    return True
+
+# ===== DEVELOPER PLATFORM TESTS =====
+
+def test_dev_docs():
+    """Test GET /api/dev/docs endpoint"""
+    response = requests.get(f"{API_URL}/dev/docs")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    docs = response.json()
+    assert "title" in docs, "API docs missing 'title' field"
+    assert "version" in docs, "API docs missing 'version' field"
+    assert "description" in docs, "API docs missing 'description' field"
+    assert "base_url" in docs, "API docs missing 'base_url' field"
+    assert "authentication" in docs, "API docs missing 'authentication' field"
+    assert "endpoints" in docs, "API docs missing 'endpoints' field"
+    assert "examples" in docs, "API docs missing 'examples' field"
+    
+    # Verify endpoints sections
+    endpoints = docs["endpoints"]
+    required_sections = ["businesses", "causes", "transactions", "contributions", "subscriptions", "leaderboards"]
+    for section in required_sections:
+        assert section in endpoints, f"API docs endpoints missing '{section}' section"
+    
+    return True
+
+def test_dev_sdk():
+    """Test GET /api/dev/sdk endpoint"""
+    response = requests.get(f"{API_URL}/dev/sdk")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    sdk_info = response.json()
+    assert "sdks" in sdk_info, "SDK info missing 'sdks' field"
+    assert "webhooks" in sdk_info, "SDK info missing 'webhooks' field"
+    assert "plugins" in sdk_info, "SDK info missing 'plugins' field"
+    
+    # Verify SDKs
+    sdks = sdk_info["sdks"]
+    required_sdks = ["javascript", "python", "php"]
+    for sdk in required_sdks:
+        assert sdk in sdks, f"SDK info missing '{sdk}' SDK"
+        assert "name" in sdks[sdk], f"{sdk} SDK missing 'name' field"
+        assert "version" in sdks[sdk], f"{sdk} SDK missing 'version' field"
+        assert "install" in sdks[sdk], f"{sdk} SDK missing 'install' field"
+        assert "docs" in sdks[sdk], f"{sdk} SDK missing 'docs' field"
+    
+    return True
+
+def test_dev_code_examples():
+    """Test GET /api/dev/code-examples endpoint"""
+    response = requests.get(f"{API_URL}/dev/code-examples")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    code_examples = response.json()
+    required_languages = ["javascript", "python", "php"]
+    for language in required_languages:
+        assert language in code_examples, f"Code examples missing '{language}' language"
+        assert "install" in code_examples[language], f"{language} examples missing 'install' field"
+        assert "setup" in code_examples[language], f"{language} examples missing 'setup' field"
+        assert "create_transaction" in code_examples[language], f"{language} examples missing 'create_transaction' field"
+        assert "create_contribution" in code_examples[language], f"{language} examples missing 'create_contribution' field"
+    
+    return True
+
+# ===== ADMIN SETTLEMENTS SYSTEM TESTS =====
+
+def test_admin_settlements():
+    """Test GET /api/admin/settlements endpoint"""
+    response = requests.get(f"{API_URL}/admin/settlements")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    settlements = response.json()
+    assert "causes" in settlements, "Settlements response missing 'causes' field"
+    
+    causes = settlements["causes"]
+    assert len(causes) > 0, "Expected at least one cause in settlements"
+    
+    # Verify settlement structure
+    for cause in causes:
+        assert "id" in cause, "Cause settlement missing 'id' field"
+        assert "name" in cause, "Cause settlement missing 'name' field"
+        assert "total_donations" in cause, "Cause settlement missing 'total_donations' field"
+        assert "direct_donations" in cause, "Cause settlement missing 'direct_donations' field"
+        assert "business_donations" in cause, "Cause settlement missing 'business_donations' field"
+        assert "pending_amount" in cause, "Cause settlement missing 'pending_amount' field"
+        assert "settled_amount" in cause, "Cause settlement missing 'settled_amount' field"
+        assert "settlement_info" in cause, "Cause settlement missing 'settlement_info' field"
+    
+    return True
+
+# ===== ENHANCED BUSINESS DASHBOARD TESTS =====
+
+def test_enhanced_business_dashboard():
+    """Test GET /api/businesses/{id}/dashboard endpoint"""
+    response = requests.get(f"{API_URL}/businesses/{test_business_id}/dashboard")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    dashboard = response.json()
+    assert "business" in dashboard, "Dashboard missing 'business' field"
+    assert "contributions_per_cause" in dashboard, "Dashboard missing 'contributions_per_cause' field"
+    assert "cause_health_metrics" in dashboard, "Dashboard missing 'cause_health_metrics' field"
+    
+    # Verify contributions per cause
+    contributions = dashboard["contributions_per_cause"]
+    assert len(contributions) > 0, "Expected at least one cause in contributions_per_cause"
+    
+    # Verify cause health metrics
+    health_metrics = dashboard["cause_health_metrics"]
+    assert len(health_metrics) > 0, "Expected at least one cause in cause_health_metrics"
+    
+    for cause in health_metrics:
+        assert "id" in cause, "Cause health metric missing 'id' field"
+        assert "name" in cause, "Cause health metric missing 'name' field"
+        assert "progress_percentage" in cause, "Cause health metric missing 'progress_percentage' field"
+        assert "contributor_stats" in cause, "Cause health metric missing 'contributor_stats' field"
+    
+    return True
 if __name__ == "__main__":
     # Global variables to store test data
     test_business_id = None
