@@ -1519,6 +1519,201 @@ async def get_sdk_information():
         }
     }
 
+@api_router.get("/dev/code-examples")
+async def get_code_examples():
+    """Get code examples for different programming languages"""
+    return {
+        "javascript": {
+            "install": "npm install @impactlink/js-sdk",
+            "setup": """
+const ImpactLink = require('@impactlink/js-sdk');
+const client = new ImpactLink({
+    apiKey: 'your_api_key_here',
+    sandbox: true // Use sandbox for testing
+});
+            """,
+            "create_transaction": """
+// Record a transaction with automatic impact allocation
+const transaction = await client.transactions.create({
+    amount: 100.00,
+    customerName: 'John Doe',
+    metadata: { orderId: 'ORDER_123' }
+});
+
+console.log(`Impact generated: $${transaction.totalImpact}`);
+            """,
+            "create_contribution": """
+// Create direct contribution to a cause
+const contribution = await client.contributions.create({
+    causeId: 'cause_id_here',
+    amount: 50.00,
+    paymentMethod: {
+        type: 'card',
+        provider: 'visa',
+        details: { token: 'payment_token_here' }
+    },
+    customerName: 'Jane Smith',
+    message: 'Supporting this great cause!'
+});
+            """,
+            "add_reaction": """
+// Add emoji reaction to a cause
+const reaction = await client.causes.addReaction('cause_id_here', {
+    emoji: '❤️',
+    userId: 'user_id_here'
+});
+            """,
+            "add_comment": """
+// Add comment to a cause
+const comment = await client.causes.addComment('cause_id_here', {
+    comment: 'This is an amazing cause!',
+    userId: 'user_id_here',
+    userType: 'customer'
+});
+            """
+        },
+        "python": {
+            "install": "pip install impactlink-python",
+            "setup": """
+import impactlink
+
+client = impactlink.Client(
+    api_key='your_api_key_here',
+    sandbox=True  # Use sandbox for testing
+)
+            """,
+            "create_transaction": """
+# Record a transaction with automatic impact allocation
+transaction = client.transactions.create(
+    amount=100.00,
+    customer_name='John Doe',
+    metadata={'order_id': 'ORDER_123'}
+)
+
+print(f"Impact generated: ${transaction.total_impact}")
+            """,
+            "create_contribution": """
+# Create direct contribution to a cause
+contribution = client.contributions.create(
+    cause_id='cause_id_here',
+    amount=50.00,
+    payment_method={
+        'type': 'card',
+        'provider': 'visa',
+        'details': {'token': 'payment_token_here'}
+    },
+    customer_name='Jane Smith',
+    message='Supporting this great cause!'
+)
+            """,
+            "webhook_handler": """
+from flask import Flask, request
+import impactlink
+
+app = Flask(__name__)
+
+@app.route('/webhook', methods=['POST'])
+def handle_webhook():
+    payload = request.get_json()
+    
+    if payload['event'] == 'transaction.created':
+        # Handle new transaction
+        print(f"New transaction: {payload['data']['transaction_id']}")
+    elif payload['event'] == 'contribution.created':
+        # Handle new contribution
+        print(f"New contribution: {payload['data']['contribution_id']}")
+    
+    return {'status': 'received'}
+            """,
+            "add_reaction": """
+# Add emoji reaction to a cause
+reaction = client.causes.add_reaction(
+    cause_id='cause_id_here',
+    emoji='❤️',
+    user_id='user_id_here'
+)
+            """,
+            "add_comment": """
+# Add comment to a cause
+comment = client.causes.add_comment(
+    cause_id='cause_id_here',
+    comment='This is an amazing cause!',
+    user_id='user_id_here',
+    user_type='customer'
+)
+            """
+        },
+        "php": {
+            "install": "composer require impactlink/php-sdk",
+            "setup": """
+<?php
+require_once 'vendor/autoload.php';
+
+use ImpactLink\\Client;
+
+$client = new Client([
+    'api_key' => 'your_api_key_here',
+    'sandbox' => true
+]);
+            """,
+            "create_transaction": """
+// Record a transaction
+$transaction = $client->transactions->create([
+    'amount' => 100.00,
+    'customer_name' => 'John Doe',
+    'metadata' => ['order_id' => 'ORDER_123']
+]);
+
+echo "Impact generated: $" . $transaction->total_impact;
+            """,
+            "create_contribution": """
+// Create direct contribution
+$contribution = $client->contributions->create([
+    'cause_id' => 'cause_id_here',
+    'amount' => 50.00,
+    'payment_method' => [
+        'type' => 'card',
+        'provider' => 'visa',
+        'details' => ['token' => 'payment_token_here']
+    ],
+    'customer_name' => 'Jane Smith',
+    'message' => 'Supporting this great cause!'
+]);
+            """,
+            "webhook_handler": """
+<?php
+// webhook.php
+$payload = json_decode(file_get_contents('php://input'), true);
+
+if ($payload['event'] === 'transaction.created') {
+    // Handle new transaction
+    error_log("New transaction: " . $payload['data']['transaction_id']);
+} elseif ($payload['event'] === 'contribution.created') {
+    // Handle new contribution
+    error_log("New contribution: " . $payload['data']['contribution_id']);
+}
+
+http_response_code(200);
+echo json_encode(['status' => 'received']);
+            """,
+            "add_reaction": """
+// Add emoji reaction to a cause
+$reaction = $client->causes->addReaction('cause_id_here', [
+    'emoji' => '❤️',
+    'user_id' => 'user_id_here'
+]);
+            """,
+            "add_comment": """
+// Add comment to a cause
+$comment = $client->causes->addComment('cause_id_here', [
+    'comment' => 'This is an amazing cause!',
+    'user_id' => 'user_id_here',
+    'user_type' => 'customer'
+]);
+            """
+        }
+    }
+
 # Badge endpoints
 @api_router.get("/badges")
 async def get_all_badges():
