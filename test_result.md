@@ -637,17 +637,20 @@ test_plan:
         agent: "main"
         comment: "✅ IMPLEMENTED: Successfully created dedicated PaymentPage component and modified subscription flow. Users now go through: registration → subscription-selection → payment → login. Payment page includes multiple payment methods (card, momo, bank_transfer, PAPSS) with comprehensive validation and error handling"
 
-  - task: "Admin Performance Metrics Endpoint"
+  - task: "Admin dashboard with performance metrics"
     implemented: true
-    working: true
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
-      - working: true
+      - working: false
+        agent: "main"
+        comment: "Creating new admin dashboard with comprehensive performance metrics including total causes, donations, registrations, revenue analytics, etc."
+      - working: false
         agent: "testing"
-        comment: "Admin Performance Metrics endpoint works correctly. GET /api/admin/performance-metrics returns comprehensive performance metrics including all required sections: overview, financial_metrics, performance_metrics, growth_analytics, category_analysis, payment_analysis, top_performers, social_engagement, badge_distribution, platform_health. All calculations for rates, percentages, and aggregations are correct."
+        comment: "✅ Performance Metrics Endpoint: Working correctly with comprehensive metrics. ❌ Admin Settlements Endpoint: ObjectId serialization issue (500 error). ❌ Create Cause Endpoint: USSD shortcode generation issue. ✅ Payment Processing: Working correctly. Need to fix ObjectId serialization and USSD shortcode generation."
 
   - task: "Enhanced Admin Settlements Endpoint"
     implemented: true
