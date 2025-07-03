@@ -420,18 +420,20 @@ def test_remove_cause_reaction():
     
     # First, make sure the customer has a reaction
     customer_reaction = {
-        "emoji": "❤️"
+        "emoji": "❤️",
+        "user_id": customer_id,
+        "user_type": "customer"
     }
     
-    # Send user_id and user_type as query parameters
-    response = requests.post(
-        f"{API_URL}/causes/{cause_id}/reactions?user_id={customer_id}&user_type=customer", 
-        json=customer_reaction
-    )
+    response = requests.post(f"{API_URL}/causes/{cause_id}/reactions", json=customer_reaction)
     assert response.status_code == 200, f"Expected status code 200 for customer reaction, got {response.status_code}"
     
     # Now remove the reaction
-    response = requests.delete(f"{API_URL}/causes/{cause_id}/reactions?user_id={customer_id}")
+    delete_data = {
+        "user_id": customer_id
+    }
+    
+    response = requests.delete(f"{API_URL}/causes/{cause_id}/reactions", json=delete_data)
     assert response.status_code == 200, f"Expected status code 200 for delete reaction, got {response.status_code}"
     
     # Verify reaction was removed
@@ -444,7 +446,7 @@ def test_remove_cause_reaction():
     assert customer_id not in user_reactions, f"Customer {customer_id} should not be in user reactions after deletion"
     
     # Test with invalid cause ID
-    response = requests.delete(f"{API_URL}/causes/invalid-id/reactions?user_id={customer_id}")
+    response = requests.delete(f"{API_URL}/causes/invalid-id/reactions", json=delete_data)
     assert response.status_code == 404, f"Expected status code 404 for invalid cause ID, got {response.status_code}"
     
     return True
