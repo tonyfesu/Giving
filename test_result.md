@@ -285,7 +285,7 @@ backend:
 
   - task: "Share Feature"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 2
     priority: "high"
@@ -300,6 +300,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "Share feature still has issues. GET /api/causes/{cause_id}/share works correctly, but POST /api/causes/{cause_id}/share returns a 500 Internal Server Error. The error in the logs shows an issue with ObjectId serialization."
+      - working: true
+        agent: "testing"
+        comment: "Share feature now works correctly. GET /api/causes/{cause_id}/share returns a shareable URL and social media links. POST /api/causes/{cause_id}/share accepts user_id and platform in the request body and returns a complete response with share_record, share_url, and social_links. The datetime serialization issue has been fixed."
 
   - task: "Comments System"
     implemented: true
