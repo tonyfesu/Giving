@@ -2596,6 +2596,7 @@ async def create_user_cause(user_id: str, cause_data: UserCauseCreate, user_type
         raise HTTPException(status_code=404, detail="User not found")
     
     # Create cause object
+    cause_code = generate_cause_code()
     cause = {
         "id": str(uuid.uuid4()),
         "name": cause_data.name,
@@ -2619,6 +2620,8 @@ async def create_user_cause(user_id: str, cause_data: UserCauseCreate, user_type
         "payment_methods_accepted": cause_data.payment_methods_accepted,
         "volunteer_opportunities": cause_data.volunteer_opportunities,
         "settlement_info": cause_data.settlement_info.dict(),
+        "cause_code": cause_code,
+        "ussd_shortcode": f"*123*86*{cause_code}*[Amount]#",
         "created_at": datetime.utcnow()
     }
     
