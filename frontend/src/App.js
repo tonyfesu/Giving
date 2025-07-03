@@ -2332,6 +2332,14 @@ function AppContent() {
               >
                 Causes
               </button>
+              {currentUser && (
+                <button
+                  onClick={() => setCurrentView("create-cause")}
+                  className={`font-medium transition-colors ${currentView === "create-cause" ? "text-blue-600" : "text-gray-600 hover:text-blue-600"}`}
+                >
+                  Create Cause
+                </button>
+              )}
               <button
                 onClick={() => setCurrentView("leaderboards")}
                 className={`font-medium transition-colors ${currentView === "leaderboards" ? "text-blue-600" : "text-gray-600 hover:text-blue-600"}`}
