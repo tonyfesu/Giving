@@ -1279,7 +1279,214 @@ const FeaturesSection = () => {
 const CustomerRegistration = ({ onCustomerCreate }) => <div></div>;
 const BusinessSetup = ({ onBusinessCreate }) => <div></div>;
 const BusinessDashboard = ({ business }) => <div></div>;
-const AdminDashboard = () => <div></div>;
+const AdminDashboard = () => {
+  const [settlements, setSettlements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTab, setSelectedTab] = useState("settlements");
+
+  useEffect(() => {
+    fetchSettlements();
+  }, []);
+
+  const fetchSettlements = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/settlements`);
+      setSettlements(response.data.settlements);
+    } catch (error) {
+      console.error("Error fetching settlements:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const initiatePayment = async (causeId) => {
+    try {
+      const response = await axios.post(`${API}/admin/settlements/${causeId}/initiate-payment`, {
+        admin_id: "admin",
+        payment_method: {
+          type: "bank_transfer",
+          provider: "bank"
+        }
+      });
+      
+      alert(`Payment initiated successfully! Reference: ${response.data.payment_reference}`);
+      fetchSettlements(); // Refresh data
+    } catch (error) {
+      console.error("Error initiating payment:", error);
+      alert("Failed to initiate payment. Please try again.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg text-gray-600">Loading settlement data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto p-6">
+      <div className="bg-white rounded-xl shadow-lg">
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-3xl font-bold text-gray-800">Admin Settlement Center</h1>
+          <p className="text-gray-600 mt-2">Manage cause settlements and payments</p>
+        </div>
+
+        <div className="p-6">
+          <div className="mb-6">
+            <div className="flex border-b border-gray-200">
+              <button
+                onClick={() => setSelectedTab("settlements")}
+                className={`px-4 py-2 font-medium ${selectedTab === "settlements" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600"}`}
+              >
+                Settlement Overview
+              </button>
+              <button
+                onClick={() => setSelectedTab("analytics")}
+                className={`px-4 py-2 font-medium ${selectedTab === "analytics" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600"}`}
+              >
+                Payment Analytics
+              </button>
+            </div>
+          </div>
+
+          {selectedTab === "settlements" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-blue-800">Total Pending</h3>
+                  <p className="text-2xl font-bold text-blue-600">
+                    ${settlements.reduce((sum, s) => sum + s.settlement.pending_amount, 0).toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-green-800">Total Settled</h3>
+                  <p className="text-2xl font-bold text-green-600">
+                    ${settlements.reduce((sum, s) => sum + s.settlement.total_settled, 0).toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-purple-800">Active Causes</h3>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {settlements.filter(s => s.settlement.pending_amount > 0).length}
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-200">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border border-gray-200 px-4 py-3 text-left">Cause</th>
+                      <th className="border border-gray-200 px-4 py-3 text-left">Creator</th>
+                      <th className="border border-gray-200 px-4 py-3 text-right">Direct Donations</th>
+                      <th className="border border-gray-200 px-4 py-3 text-right">Business Donations</th>
+                      <th className="border border-gray-200 px-4 py-3 text-right">Total Donations</th>
+                      <th className="border border-gray-200 px-4 py-3 text-right">Pending Payment</th>
+                      <th className="border border-gray-200 px-4 py-3 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {settlements.map((settlement) => (
+                      <tr key={settlement.cause.id} className="hover:bg-gray-50">
+                        <td className="border border-gray-200 px-4 py-3">
+                          <div>
+                            <div className="font-medium text-gray-800">{settlement.cause.name}</div>
+                            <div className="text-sm text-gray-500">{settlement.cause.category}</div>
+                          </div>
+                        </td>
+                        <td className="border border-gray-200 px-4 py-3">
+                          <div>
+                            <div className="font-medium text-gray-800">{settlement.cause.creator_name}</div>
+                            <div className="text-sm text-gray-500">{settlement.cause.creator_type}</div>
+                          </div>
+                        </td>
+                        <td className="border border-gray-200 px-4 py-3 text-right">
+                          <span className="font-medium text-green-600">
+                            ${settlement.direct_donations.toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="border border-gray-200 px-4 py-3 text-right">
+                          <span className="font-medium text-blue-600">
+                            ${settlement.business_donations.toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="border border-gray-200 px-4 py-3 text-right">
+                          <span className="font-bold text-gray-800">
+                            ${settlement.total_donations.toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="border border-gray-200 px-4 py-3 text-right">
+                          <span className={`font-bold ${settlement.settlement.pending_amount > 0 ? 'text-orange-600' : 'text-gray-400'}`}>
+                            ${settlement.settlement.pending_amount.toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="border border-gray-200 px-4 py-3 text-center">
+                          {settlement.settlement.pending_amount > 0 ? (
+                            <button
+                              onClick={() => initiatePayment(settlement.cause.id)}
+                              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                            >
+                              Initiate Payment
+                            </button>
+                          ) : (
+                            <span className="text-gray-400 text-sm">Settled</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {selectedTab === "analytics" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Payment Distribution</h3>
+                  <div className="space-y-3">
+                    {settlements.slice(0, 5).map((settlement) => (
+                      <div key={settlement.cause.id} className="flex justify-between items-center">
+                        <span className="text-gray-600 truncate max-w-xs">{settlement.cause.name}</span>
+                        <span className="font-medium text-gray-800">
+                          ${settlement.total_donations.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Activity</h3>
+                  <div className="space-y-3">
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">System Status:</span> All payment systems operational
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">Last Settlement:</span> {
+                        settlements.find(s => s.settlement.last_settlement_date)?.settlement.last_settlement_date 
+                          ? new Date(settlements.find(s => s.settlement.last_settlement_date).settlement.last_settlement_date).toLocaleDateString()
+                          : "No recent settlements"
+                      }
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">Pending Causes:</span> {settlements.filter(s => s.settlement.pending_amount > 0).length} causes awaiting payment
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 const DeveloperPlatform = () => <div></div>;
 
 // Main App Content Component
