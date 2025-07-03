@@ -4083,10 +4083,22 @@ function AppContent() {
     switch (currentView) {
       case "demo":
         return <DemoUserSelector onUserSelect={handleUserSelect} />;
+      case "register":
+        return <RegistrationForm onRegistrationComplete={handleRegistrationComplete} />;
+      case "subscription-selection":
+        return registrationData ? (
+          <PostRegistrationSubscription 
+            userData={registrationData.userData}
+            userType={registrationData.userType}
+            onSubscriptionComplete={handleSubscriptionComplete}
+          />
+        ) : (
+          <div>Error: No registration data found</div>
+        );
       case "customer-register":
-        return <CustomerRegistration onCustomerCreate={handleCustomerCreate} />;
+        return <RegistrationForm onRegistrationComplete={handleRegistrationComplete} />;
       case "business-setup":
-        return <BusinessSetup onBusinessCreate={handleBusinessCreate} />;
+        return <RegistrationForm onRegistrationComplete={handleRegistrationComplete} />;
       case "home":
         return (
           <>
@@ -4108,10 +4120,10 @@ function AppContent() {
                     Try Demo Platform
                   </button>
                   <button
-                    onClick={() => setCurrentView("business-setup")}
+                    onClick={() => setCurrentView("register")}
                     className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-12 py-4 rounded-full font-semibold text-xl hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all shadow-xl"
                   >
-                    Register Business
+                    Register Now
                   </button>
                 </div>
               </div>
