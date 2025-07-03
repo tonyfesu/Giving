@@ -40,7 +40,7 @@ def create_api_key():
 def generate_account_number():
     """Generate a unique account number"""
     import random
-    return f"IL{random.randint(1000000000, 9999999999)}"
+    return f"NN{random.randint(1000000000, 9999999999)}"
 
 # Enhanced Models
 class PaymentMethod(BaseModel):
