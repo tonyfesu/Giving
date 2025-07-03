@@ -35,7 +35,7 @@ security = HTTPBearer(auto_error=False)
 
 def create_api_key():
     """Generate a simple API key for demo purposes"""
-    return f"il_{uuid.uuid4().hex[:24]}"
+    return f"nn_{uuid.uuid4().hex[:24]}"
 
 def generate_account_number():
     """Generate a unique account number"""
