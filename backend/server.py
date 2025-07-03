@@ -1577,7 +1577,7 @@ const comment = await client.causes.addComment('cause_id_here', {
             """
         },
         "python": {
-            "install": "pip install impactlink-python",
+            "install": "pip install nnoboa-python",
             "setup": """
 import impactlink
 
