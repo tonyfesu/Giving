@@ -584,6 +584,203 @@ const CauseBrowser = () => {
                     )}
                   </div>
 
+                  {/* Social Features */}
+                  <div className="border-t pt-4 mb-4">
+                    {/* Emoji Reactions */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-sm text-gray-600 font-medium">React:</span>
+                      {['❤️', '👍', '🎉', '😢', '😡'].map((emoji) => {
+                        const isUserReaction = reactions[cause.id]?.user_reactions?.[currentUser?.id] === emoji;
+                        const count = reactions[cause.id]?.reaction_counts?.[emoji] || 0;
+                        
+                        return (
+                          <button
+                            key={emoji}
+                            onClick={() => isUserReaction ? removeReaction(cause.id) : addReaction(cause.id, emoji)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors ${
+                              isUserReaction 
+                                ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' 
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                            }`}
+                          >
+                            <span>{emoji}</span>
+                            {count > 0 && <span className="text-xs">{count}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Share and Comment Actions */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        {/* Share Button */}
+                        <div className="relative group">
+                          <button
+                            onClick={() => shareCause(cause.id, 'copy')}
+                            className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm hover:bg-green-200 transition-colors"
+                          >
+                            📤 Share
+                          </button>
+                          
+                          {/* Share Dropdown */}
+                          <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-10">
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => shareCause(cause.id, 'facebook')}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                                title="Share on Facebook"
+                              >
+                                📘
+                              </button>
+                              <button
+                                onClick={() => shareCause(cause.id, 'twitter')}
+                                className="p-2 text-blue-400 hover:bg-blue-50 rounded"
+                                title="Share on Twitter"
+                              >
+                                🐦
+                              </button>
+                              <button
+                                onClick={() => shareCause(cause.id, 'whatsapp')}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded"
+                                title="Share on WhatsApp"
+                              >
+                                📱
+                              </button>
+                              <button
+                                onClick={() => shareCause(cause.id, 'copy')}
+                                className="p-2 text-gray-600 hover:bg-gray-50 rounded"
+                                title="Copy Link"
+                              >
+                                🔗
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Comments Toggle */}
+                        <button
+                          onClick={() => toggleComments(cause.id)}
+                          className="flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm hover:bg-purple-200 transition-colors"
+                        >
+                          💬 Comments
+                          {comments[cause.id] && (
+                            <span className="text-xs">({comments[cause.id].total_comments})</span>
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="text-xs text-gray-500">
+                        {reactions[cause.id]?.total_reactions || 0} reactions
+                      </div>
+                    </div>
+
+                    {/* Comments Section */}
+                    {showComments[cause.id] && (
+                      <div className="mt-4 border-t pt-3">
+                        {/* Add Comment Form */}
+                        {currentUser && (
+                          <div className="mb-3">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={replyTo ? `@${replyTo.user_name} ` + newComment : newComment}
+                                onChange={(e) => setNewComment(replyTo ? e.target.value.replace(`@${replyTo.user_name} `, '') : e.target.value)}
+                                placeholder={replyTo ? `Reply to ${replyTo.user_name}...` : "Add a comment..."}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    addComment(cause.id, newComment, replyTo?.id);
+                                  }
+                                }}
+                              />
+                              <button
+                                onClick={() => addComment(cause.id, newComment, replyTo?.id)}
+                                className="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
+                              >
+                                Post
+                              </button>
+                            </div>
+                            {replyTo && (
+                              <button
+                                onClick={() => setReplyTo(null)}
+                                className="text-xs text-gray-500 mt-1 hover:text-gray-700"
+                              >
+                                Cancel reply
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Comments List */}
+                        <div className="space-y-3 max-h-64 overflow-y-auto">
+                          {comments[cause.id]?.comments?.map((commentGroup) => (
+                            <div key={commentGroup.comment.id} className="space-y-2">
+                              {/* Main Comment */}
+                              <div className={`p-3 rounded-lg ${commentGroup.comment.is_admin_response ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-gray-50'}`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium text-sm text-gray-800">
+                                    {commentGroup.comment.user_name}
+                                  </span>
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    commentGroup.comment.user_type === 'business' ? 'bg-blue-100 text-blue-800' :
+                                    commentGroup.comment.user_type === 'customer' ? 'bg-green-100 text-green-800' :
+                                    'bg-purple-100 text-purple-800'
+                                  }`}>
+                                    {commentGroup.comment.user_type}
+                                  </span>
+                                  {commentGroup.comment.is_admin_response && (
+                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                                      ✅ Creator
+                                    </span>
+                                  )}
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(commentGroup.comment.created_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-700">{commentGroup.comment.comment}</p>
+                                {currentUser && (
+                                  <button
+                                    onClick={() => setReplyTo(commentGroup.comment)}
+                                    className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                                  >
+                                    Reply
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Replies */}
+                              {commentGroup.replies?.map((reply) => (
+                                <div key={reply.id} className={`ml-4 p-2 rounded-lg ${reply.is_admin_response ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-gray-100'}`}>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium text-sm text-gray-800">
+                                      {reply.user_name}
+                                    </span>
+                                    <span className={`px-2 py-1 rounded-full text-xs ${
+                                      reply.user_type === 'business' ? 'bg-blue-100 text-blue-800' :
+                                      reply.user_type === 'customer' ? 'bg-green-100 text-green-800' :
+                                      'bg-purple-100 text-purple-800'
+                                    }`}>
+                                      {reply.user_type}
+                                    </span>
+                                    {reply.is_admin_response && (
+                                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                                        ✅ Creator
+                                      </span>
+                                    )}
+                                    <span className="text-xs text-gray-500">
+                                      {new Date(reply.created_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-700">{reply.comment}</p>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     onClick={() => setSelectedCause(cause)}
                     disabled={isExpired}
