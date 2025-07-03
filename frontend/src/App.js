@@ -2552,7 +2552,7 @@ const DeveloperPlatform = () => {
     <div className="max-w-7xl mx-auto p-6">
       <div className="bg-white rounded-xl shadow-lg">
         <div className="p-6 border-b border-gray-200">
-          <h1 className="text-3xl font-bold text-gray-800">ImpactLink Developer Platform</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Nnoboa Developer Platform</h1>
           <p className="text-gray-600 mt-2">Everything you need to integrate social impact into your applications</p>
         </div>
 
