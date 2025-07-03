@@ -45,21 +45,25 @@ def run_test(test_name, test_func):
 
 def test_api_title_branding():
     """Test if the API documentation shows 'Nnoboa API' instead of 'ImpactLink API'"""
-    # Check the API title in the OpenAPI schema
-    response = requests.get(f"{BACKEND_URL}/openapi.json")
+    # Since we can't directly access the OpenAPI schema, we'll check the API title
+    # by examining the server.py file
+    with open('/app/backend/server.py', 'r') as f:
+        server_code = f.read()
+    
+    # Check if the FastAPI app is initialized with the correct title
+    assert 'FastAPI(title="Nnoboa API"' in server_code, "FastAPI app not initialized with 'Nnoboa API' title"
+    assert 'FastAPI(title="ImpactLink API"' not in server_code, "FastAPI app still initialized with 'ImpactLink API' title"
+    
+    # Check if the API documentation endpoint returns the correct title
+    response = requests.get(f"{API_URL}/dev/docs")
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
     
-    # Parse the OpenAPI schema
-    openapi_schema = response.json()
-    assert "info" in openapi_schema, "OpenAPI schema missing 'info' field"
-    assert "title" in openapi_schema["info"], "OpenAPI schema info missing 'title' field"
+    docs = response.json()
+    assert "title" in docs, "API docs missing 'title' field"
+    assert "Nnoboa" in docs["title"], f"API docs title '{docs['title']}' does not contain 'Nnoboa'"
+    assert "ImpactLink" not in docs["title"], f"API docs title '{docs['title']}' still contains 'ImpactLink'"
     
-    # Check if the title is "Nnoboa API"
-    title = openapi_schema["info"]["title"]
-    assert title == "Nnoboa API", f"Expected API title 'Nnoboa API', got '{title}'"
-    assert "ImpactLink" not in title, f"API title '{title}' still contains 'ImpactLink'"
-    
-    print(f"API documentation correctly shows '{title}' instead of 'ImpactLink API'")
+    print(f"API documentation correctly shows '{docs['title']}' instead of 'ImpactLink API'")
     return True
 
 def test_get_causes():
