@@ -137,14 +137,33 @@ class Business(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class BusinessCreate(BaseModel):
-    name: str
-    description: str
+    name: str  # This will be the contact person name
+    business_name: str  # The actual business name
+    description: Optional[str] = None
     industry: str
-    email: str
+    business_type: Optional[str] = None
+    company_size: Optional[str] = None
+    tax_id: Optional[str] = None
+    email: str  # Contact email
     phone: Optional[str] = None
     website: Optional[str] = None
+    # Contact person address
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    postal_code: Optional[str] = None
+    # Business address
+    business_address: Optional[str] = None
+    business_city: Optional[str] = None
+    business_state: Optional[str] = None
+    business_country: Optional[str] = None
+    business_postal_code: Optional[str] = None
+    bio: Optional[str] = None
     preferred_causes: List[str] = Field(default_factory=list)
     settlement_info: Optional[SettlementInfo] = None
+    newsletter_subscription: bool = False
+    marketing_consent: bool = False
 
 class Cause(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
