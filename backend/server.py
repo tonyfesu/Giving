@@ -1853,6 +1853,217 @@ async def create_user_cause(user_id: str, cause_data: UserCauseCreate, user_type
     
     return Cause(**cause)
 
+# Social Features Endpoints
+
+@api_router.get("/causes/{cause_id}/share")
+async def get_cause_share_url(cause_id: str):
+    """Get shareable URL for a cause"""
+    cause = await db.causes.find_one({"id": cause_id})
+    if not cause:
+        raise HTTPException(status_code=404, detail="Cause not found")
+    
+    share_url = f"{BACKEND_URL}/causes/{cause_id}"
+    
+    return {
+        "cause_id": cause_id,
+        "share_url": share_url,
+        "social_links": {
+            "facebook": f"https://www.facebook.com/sharer/sharer.php?u={share_url}",
+            "twitter": f"https://twitter.com/intent/tweet?url={share_url}&text=Check out this amazing cause: {cause['name']}",
+            "linkedin": f"https://www.linkedin.com/sharing/share-offsite/?url={share_url}",
+            "whatsapp": f"https://wa.me/?text=Check out this amazing cause: {cause['name']} {share_url}",
+            "email": f"mailto:?subject=Check out this cause&body=I thought you might be interested in this cause: {cause['name']} - {share_url}"
+        }
+    }
+
+@api_router.post("/causes/{cause_id}/share")
+async def track_cause_share(cause_id: str, share_data: dict):
+    """Track cause share activity"""
+    cause = await db.causes.find_one({"id": cause_id})
+    if not cause:
+        raise HTTPException(status_code=404, detail="Cause not found")
+    
+    share_record = {
+        "id": str(uuid.uuid4()),
+        "cause_id": cause_id,
+        "share_url": f"{BACKEND_URL}/causes/{cause_id}",
+        "shared_by": share_data.get("user_id"),
+        "platform": share_data.get("platform", "link"),
+        "created_at": datetime.utcnow()
+    }
+    
+    await db.cause_shares.insert_one(share_record)
+    
+    return {"message": "Share tracked successfully"}
+
+@api_router.get("/causes/{cause_id}/comments")
+async def get_cause_comments(cause_id: str):
+    """Get all comments for a cause"""
+    cause = await db.causes.find_one({"id": cause_id})
+    if not cause:
+        raise HTTPException(status_code=404, detail="Cause not found")
+    
+    comments = await db.cause_comments.find({"cause_id": cause_id}).sort("created_at", 1).to_list(1000)
+    
+    # Organize comments and replies
+    organized_comments = []
+    comment_map = {}
+    
+    for comment in comments:
+        comment_obj = CauseComment(**comment)
+        comment_map[comment_obj.id] = comment_obj
+        
+        if comment_obj.parent_comment_id is None:
+            # Top-level comment
+            organized_comments.append({
+                "comment": comment_obj,
+                "replies": []
+            })
+    
+    # Add replies to their parent comments
+    for comment in comments:
+        comment_obj = CauseComment(**comment)
+        if comment_obj.parent_comment_id:
+            # Find parent comment in organized structure
+            for org_comment in organized_comments:
+                if org_comment["comment"].id == comment_obj.parent_comment_id:
+                    org_comment["replies"].append(comment_obj)
+                    break
+    
+    return {
+        "cause_id": cause_id,
+        "comments": organized_comments,
+        "total_comments": len(comments)
+    }
+
+@api_router.post("/causes/{cause_id}/comments")
+async def create_cause_comment(cause_id: str, comment_data: CommentCreate, user_id: str, user_type: str):
+    """Create a comment on a cause"""
+    cause = await db.causes.find_one({"id": cause_id})
+    if not cause:
+        raise HTTPException(status_code=404, detail="Cause not found")
+    
+    # Get user information
+    if user_type == "business":
+        user = await db.businesses.find_one({"id": user_id})
+        user_name = user["name"] if user else "Unknown Business"
+    elif user_type == "customer":
+        user = await db.customers.find_one({"id": user_id})
+        user_name = user["name"] if user else "Unknown Customer"
+    elif user_type == "admin":
+        user = await db.admin_users.find_one({"id": user_id})
+        user_name = user["username"] if user else "Admin"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid user type")
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if this is an admin response (cause creator responding)
+    is_admin_response = (cause["creator_id"] == user_id and cause["creator_type"] == user_type)
+    
+    comment = {
+        "id": str(uuid.uuid4()),
+        "cause_id": cause_id,
+        "user_id": user_id,
+        "user_name": user_name,
+        "user_type": user_type,
+        "comment": comment_data.comment,
+        "parent_comment_id": comment_data.parent_comment_id,
+        "is_admin_response": is_admin_response,
+        "created_at": datetime.utcnow(),
+        "updated_at": None
+    }
+    
+    await db.cause_comments.insert_one(comment)
+    
+    return CauseComment(**comment)
+
+@api_router.get("/causes/{cause_id}/reactions")
+async def get_cause_reactions(cause_id: str):
+    """Get emoji reactions for a cause"""
+    cause = await db.causes.find_one({"id": cause_id})
+    if not cause:
+        raise HTTPException(status_code=404, detail="Cause not found")
+    
+    reactions = await db.emoji_reactions.find({"cause_id": cause_id}).to_list(1000)
+    
+    # Group reactions by emoji
+    reaction_counts = {}
+    user_reactions = {}
+    
+    for reaction in reactions:
+        emoji = reaction["emoji"]
+        user_id = reaction["user_id"]
+        
+        if emoji not in reaction_counts:
+            reaction_counts[emoji] = 0
+        reaction_counts[emoji] += 1
+        
+        # Track user reactions for checking if user already reacted
+        user_reactions[user_id] = emoji
+    
+    return {
+        "cause_id": cause_id,
+        "reaction_counts": reaction_counts,
+        "total_reactions": len(reactions),
+        "user_reactions": user_reactions
+    }
+
+@api_router.post("/causes/{cause_id}/reactions")
+async def add_cause_reaction(cause_id: str, reaction_data: EmojiReactionCreate, user_id: str, user_type: str):
+    """Add emoji reaction to a cause"""
+    cause = await db.causes.find_one({"id": cause_id})
+    if not cause:
+        raise HTTPException(status_code=404, detail="Cause not found")
+    
+    # Get user information
+    if user_type == "business":
+        user = await db.businesses.find_one({"id": user_id})
+        user_name = user["name"] if user else "Unknown Business"
+    elif user_type == "customer":
+        user = await db.customers.find_one({"id": user_id})
+        user_name = user["name"] if user else "Unknown Customer"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid user type")
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if user already has a reaction for this cause
+    existing_reaction = await db.emoji_reactions.find_one({"cause_id": cause_id, "user_id": user_id})
+    
+    if existing_reaction:
+        # Update existing reaction
+        await db.emoji_reactions.update_one(
+            {"cause_id": cause_id, "user_id": user_id},
+            {"$set": {"emoji": reaction_data.emoji, "created_at": datetime.utcnow()}}
+        )
+        return {"message": "Reaction updated successfully", "emoji": reaction_data.emoji}
+    else:
+        # Create new reaction
+        reaction = {
+            "id": str(uuid.uuid4()),
+            "cause_id": cause_id,
+            "user_id": user_id,
+            "user_name": user_name,
+            "emoji": reaction_data.emoji,
+            "created_at": datetime.utcnow()
+        }
+        
+        await db.emoji_reactions.insert_one(reaction)
+        return {"message": "Reaction added successfully", "emoji": reaction_data.emoji}
+
+@api_router.delete("/causes/{cause_id}/reactions")
+async def remove_cause_reaction(cause_id: str, user_id: str):
+    """Remove user's emoji reaction from a cause"""
+    result = await db.emoji_reactions.delete_one({"cause_id": cause_id, "user_id": user_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Reaction not found")
+    
+    return {"message": "Reaction removed successfully"}
+
 # Enhanced dashboard endpoints
 @api_router.get("/impact/dashboard/{business_id}")
 async def get_impact_dashboard(business_id: str):
