@@ -631,17 +631,53 @@ test_plan:
         agent: "main"
         comment: "Need to modify subscription flow to redirect to payment page after subscription selection, before allowing user login/platform access"
 
-  - task: "Admin dashboard with performance metrics"
-    implemented: false
-    working: false
+  - task: "Admin Performance Metrics Endpoint"
+    implemented: true
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
+      - working: true
+        agent: "testing"
+        comment: "Admin Performance Metrics endpoint works correctly. GET /api/admin/performance-metrics returns comprehensive performance metrics including all required sections: overview, financial_metrics, performance_metrics, growth_analytics, category_analysis, payment_analysis, top_performers, social_engagement, badge_distribution, platform_health. All calculations for rates, percentages, and aggregations are correct."
+
+  - task: "Enhanced Admin Settlements Endpoint"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
       - working: false
-        agent: "main"
-        comment: "Creating new admin dashboard with comprehensive performance metrics including total causes, donations, registrations, revenue analytics, etc."
+        agent: "testing"
+        comment: "Enhanced Admin Settlements endpoint has issues. GET /api/admin/settlements returns a 500 Internal Server Error. The error in the logs shows an issue with ObjectId serialization: 'ObjectId' object is not iterable. This is a common issue when working with MongoDB, where ObjectId objects need to be converted to strings before being returned in the API response."
+
+  - task: "Create Cause Endpoint"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Create Cause endpoint has issues. POST /api/users/{user_id}/causes works for creating causes with all required fields, but the USSD shortcode generation is not working correctly. The shortcode should start with '*123*86*' but it doesn't match this pattern. Both business and customer creator types can create causes, but the shortcode issue needs to be fixed."
+
+  - task: "Payment Processing Endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Payment Processing endpoint works correctly. POST /api/payments/process successfully handles different payment methods (card, momo, bank_transfer, papss) and returns proper status and transaction IDs. Subscription payment integration also works correctly. All validation and error handling is implemented properly."
 
 agent_communication:
   - agent: "main"
