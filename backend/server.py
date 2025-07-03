@@ -1263,7 +1263,30 @@ async def update_customer_preferred_causes(customer_id: str, cause_ids: List[str
 # Enhanced business endpoints
 @api_router.post("/businesses", response_model=Business)
 async def create_business(business: BusinessCreate):
+    # Check if email already exists
+    existing = await db.businesses.find_one({"email": business.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
     business_dict = business.dict()
+    
+    # Map the frontend data to backend structure
+    business_dict["name"] = business_dict.get("business_name", business_dict["name"])  # Use business_name as the main name
+    business_dict["contact_person"] = business_dict["name"]  # Contact person name
+    business_dict["contact_address"] = business_dict.get("address")
+    business_dict["contact_city"] = business_dict.get("city") 
+    business_dict["contact_state"] = business_dict.get("state")
+    business_dict["contact_country"] = business_dict.get("country")
+    business_dict["contact_postal_code"] = business_dict.get("postal_code")
+    
+    # Clean up fields that don't exist in Business model
+    business_dict.pop("address", None)
+    business_dict.pop("city", None)
+    business_dict.pop("state", None)
+    business_dict.pop("country", None)
+    business_dict.pop("postal_code", None)
+    business_dict.pop("business_name", None)
+    
     business_obj = Business(**business_dict)
     await db.businesses.insert_one(business_obj.dict())
     
