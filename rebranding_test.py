@@ -45,16 +45,21 @@ def run_test(test_name, test_func):
 
 def test_api_title_branding():
     """Test if the API documentation shows 'Nnoboa API' instead of 'ImpactLink API'"""
-    # Check the API title in the FastAPI docs
-    response = requests.get(f"{BACKEND_URL}/docs")
+    # Check the API title in the OpenAPI schema
+    response = requests.get(f"{BACKEND_URL}/openapi.json")
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
     
-    # Check if the response contains "Nnoboa API" in the title
-    content = response.text
-    assert "Nnoboa API" in content, "API documentation does not show 'Nnoboa API' in the title"
-    assert "ImpactLink API" not in content, "API documentation still shows 'ImpactLink API' in the title"
+    # Parse the OpenAPI schema
+    openapi_schema = response.json()
+    assert "info" in openapi_schema, "OpenAPI schema missing 'info' field"
+    assert "title" in openapi_schema["info"], "OpenAPI schema info missing 'title' field"
     
-    print("API documentation correctly shows 'Nnoboa API' instead of 'ImpactLink API'")
+    # Check if the title is "Nnoboa API"
+    title = openapi_schema["info"]["title"]
+    assert title == "Nnoboa API", f"Expected API title 'Nnoboa API', got '{title}'"
+    assert "ImpactLink" not in title, f"API title '{title}' still contains 'ImpactLink'"
+    
+    print(f"API documentation correctly shows '{title}' instead of 'ImpactLink API'")
     return True
 
 def test_get_causes():
