@@ -1498,10 +1498,10 @@ async def get_sdk_information():
                 "docs": "https://docs.nnoboa.com/sdk/python"
             },
             "php": {
-                "name": "ImpactLink PHP SDK",
+                "name": "Nnoboa PHP SDK",
                 "version": "1.0.0",
-                "install": "composer require impactlink/php-sdk",
-                "docs": "https://docs.impactlink.com/sdk/php"
+                "install": "composer require nnoboa/php-sdk",
+                "docs": "https://docs.nnoboa.com/sdk/php"
             }
         },
         "webhooks": {
