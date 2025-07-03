@@ -977,6 +977,493 @@ const CauseBrowser = () => {
   );
 };
 
+// Dedicated Payment Page Component
+const PaymentPage = ({ userData, userType, selectedPlan, onPaymentComplete }) => {
+  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [loading, setLoading] = useState(false);
+  const [paymentData, setPaymentData] = useState({
+    card_number: "",
+    expiry_month: "",
+    expiry_year: "",
+    cvv: "",
+    cardholder_name: "",
+    
+    // Mobile Money
+    phone_number: "",
+    provider: "mtn",
+    
+    // Bank Transfer
+    bank_name: "",
+    account_number: "",
+    routing_number: "",
+    
+    // PAPSS
+    papss_reference: ""
+  });
+  const [paymentErrors, setPaymentErrors] = useState({});
+  
+  const handlePaymentInputChange = (e) => {
+    const { name, value } = e.target;
+    setPaymentData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (paymentErrors[name]) {
+      setPaymentErrors(prev => ({
+        ...prev,
+        [name]: ""
+      }));
+    }
+  };
+  
+  const validatePaymentData = () => {
+    const errors = {};
+    
+    if (paymentMethod === "card") {
+      if (!paymentData.card_number.replace(/\s/g, '')) errors.card_number = "Card number is required";
+      if (!paymentData.expiry_month) errors.expiry_month = "Expiry month is required";
+      if (!paymentData.expiry_year) errors.expiry_year = "Expiry year is required";
+      if (!paymentData.cvv) errors.cvv = "CVV is required";
+      if (!paymentData.cardholder_name.trim()) errors.cardholder_name = "Cardholder name is required";
+    } else if (paymentMethod === "momo") {
+      if (!paymentData.phone_number.trim()) errors.phone_number = "Phone number is required";
+      if (!paymentData.provider) errors.provider = "Provider is required";
+    } else if (paymentMethod === "bank_transfer") {
+      if (!paymentData.bank_name.trim()) errors.bank_name = "Bank name is required";
+      if (!paymentData.account_number.trim()) errors.account_number = "Account number is required";
+      if (!paymentData.routing_number.trim()) errors.routing_number = "Routing number is required";
+    } else if (paymentMethod === "papss") {
+      if (!paymentData.papss_reference.trim()) errors.papss_reference = "PAPSS reference is required";
+    }
+    
+    setPaymentErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  const processPayment = async () => {
+    if (!validatePaymentData()) {
+      return false;
+    }
+    
+    try {
+      const paymentPayload = {
+        amount: selectedPlan.price,
+        currency: "USD",
+        method: {
+          type: paymentMethod,
+          ...paymentData
+        },
+        description: `Subscription to ${selectedPlan.name} plan`,
+        user_id: userData.id,
+        user_type: userType
+      };
+      
+      const response = await axios.post(`${API}/payments/process`, paymentPayload);
+      
+      if (response.data.status === "completed" || response.data.status === "pending") {
+        return true;
+      } else {
+        throw new Error("Payment failed");
+      }
+    } catch (error) {
+      console.error("Payment processing error:", error);
+      setPaymentErrors({
+        submit: error.response?.data?.message || "Payment processing failed. Please try again."
+      });
+      return false;
+    }
+  };
+  
+  const handleSubmitPayment = async () => {
+    setLoading(true);
+    
+    try {
+      const paymentSuccess = await processPayment();
+      if (paymentSuccess) {
+        // Create subscription after successful payment
+        const subscriptionData = {
+          user_id: userData.id,
+          user_type: userType,
+          plan_id: selectedPlan.id,
+          plan_name: selectedPlan.name,
+          price: selectedPlan.price,
+          billing_cycle: selectedPlan.billing_cycle
+        };
+        
+        await axios.post(`${API}/subscriptions`, subscriptionData);
+        
+        // Complete the payment process
+        onPaymentComplete({
+          userData,
+          userType,
+          subscription: selectedPlan,
+          paymentStatus: "completed"
+        });
+      }
+    } catch (error) {
+      console.error("Error processing payment:", error);
+      setPaymentErrors({
+        submit: error.response?.data?.message || "Payment processing failed. Please try again."
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const formatCardNumber = (value) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    const matches = v.match(/\d{4,16}/g);
+    const match = matches && matches[0] || '';
+    const parts = [];
+    for (let i = 0, len = match.length; i < len; i += 4) {
+      parts.push(match.substring(i, i + 4));
+    }
+    if (parts.length) {
+      return parts.join(' ');
+    } else {
+      return v;
+    }
+  };
+  
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Complete Your Payment</h1>
+            <p className="text-gray-600">
+              Complete payment for: <strong>{selectedPlan.name}</strong> - ${selectedPlan.price}/{selectedPlan.billing_cycle}
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+              <p className="text-blue-800">
+                <strong>Welcome {userData.name}!</strong> Complete your payment to access your account.
+              </p>
+            </div>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Payment Method Selection */}
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">Payment Method</h3>
+              <div className="space-y-3 mb-6">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="card"
+                    checked={paymentMethod === "card"}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="flex items-center gap-2">
+                    💳 Credit/Debit Card
+                  </span>
+                </label>
+                
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="momo"
+                    checked={paymentMethod === "momo"}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="flex items-center gap-2">
+                    📱 Mobile Money
+                  </span>
+                </label>
+                
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="bank_transfer"
+                    checked={paymentMethod === "bank_transfer"}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="flex items-center gap-2">
+                    🏦 Bank Transfer
+                  </span>
+                </label>
+                
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="papss"
+                    checked={paymentMethod === "papss"}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="flex items-center gap-2">
+                    💰 PAPSS
+                  </span>
+                </label>
+              </div>
+              
+              {/* Order Summary */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-800 mb-2">Order Summary</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>{selectedPlan.name} Plan</span>
+                    <span>${selectedPlan.price}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Billing Cycle</span>
+                    <span>{selectedPlan.billing_cycle}</span>
+                  </div>
+                  <hr className="my-2" />
+                  <div className="flex justify-between font-bold">
+                    <span>Total</span>
+                    <span>${selectedPlan.price}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Payment Form */}
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">Payment Details</h3>
+              
+              {/* Credit/Debit Card Form */}
+              {paymentMethod === "card" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Card Number *</label>
+                    <input
+                      type="text"
+                      name="card_number"
+                      value={formatCardNumber(paymentData.card_number)}
+                      onChange={(e) => handlePaymentInputChange({
+                        target: { name: 'card_number', value: e.target.value }
+                      })}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                        paymentErrors.card_number ? "border-red-500" : "border-gray-300"
+                      }`}
+                      placeholder="1234 5678 9012 3456"
+                      maxLength="19"
+                    />
+                    {paymentErrors.card_number && <p className="text-red-500 text-sm mt-1">{paymentErrors.card_number}</p>}
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Month *</label>
+                      <select
+                        name="expiry_month"
+                        value={paymentData.expiry_month}
+                        onChange={handlePaymentInputChange}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          paymentErrors.expiry_month ? "border-red-500" : "border-gray-300"
+                        }`}
+                      >
+                        <option value="">MM</option>
+                        {Array.from({length: 12}, (_, i) => i + 1).map(month => (
+                          <option key={month} value={month.toString().padStart(2, '0')}>
+                            {month.toString().padStart(2, '0')}
+                          </option>
+                        ))}
+                      </select>
+                      {paymentErrors.expiry_month && <p className="text-red-500 text-sm mt-1">{paymentErrors.expiry_month}</p>}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Year *</label>
+                      <select
+                        name="expiry_year"
+                        value={paymentData.expiry_year}
+                        onChange={handlePaymentInputChange}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          paymentErrors.expiry_year ? "border-red-500" : "border-gray-300"
+                        }`}
+                      >
+                        <option value="">YYYY</option>
+                        {Array.from({length: 10}, (_, i) => new Date().getFullYear() + i).map(year => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                      {paymentErrors.expiry_year && <p className="text-red-500 text-sm mt-1">{paymentErrors.expiry_year}</p>}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">CVV *</label>
+                      <input
+                        type="text"
+                        name="cvv"
+                        value={paymentData.cvv}
+                        onChange={handlePaymentInputChange}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          paymentErrors.cvv ? "border-red-500" : "border-gray-300"
+                        }`}
+                        placeholder="123"
+                        maxLength="4"
+                      />
+                      {paymentErrors.cvv && <p className="text-red-500 text-sm mt-1">{paymentErrors.cvv}</p>}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Cardholder Name *</label>
+                    <input
+                      type="text"
+                      name="cardholder_name"
+                      value={paymentData.cardholder_name}
+                      onChange={handlePaymentInputChange}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                        paymentErrors.cardholder_name ? "border-red-500" : "border-gray-300"
+                      }`}
+                      placeholder="John Doe"
+                    />
+                    {paymentErrors.cardholder_name && <p className="text-red-500 text-sm mt-1">{paymentErrors.cardholder_name}</p>}
+                  </div>
+                </div>
+              )}
+              
+              {/* Mobile Money Form */}
+              {paymentMethod === "momo" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Provider *</label>
+                    <select
+                      name="provider"
+                      value={paymentData.provider}
+                      onChange={handlePaymentInputChange}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                        paymentErrors.provider ? "border-red-500" : "border-gray-300"
+                      }`}
+                    >
+                      <option value="mtn">MTN Mobile Money</option>
+                      <option value="vodacom">Vodacom M-Pesa</option>
+                      <option value="airtel">Airtel Money</option>
+                      <option value="tigo">Tigo Pesa</option>
+                    </select>
+                    {paymentErrors.provider && <p className="text-red-500 text-sm mt-1">{paymentErrors.provider}</p>}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                    <input
+                      type="tel"
+                      name="phone_number"
+                      value={paymentData.phone_number}
+                      onChange={handlePaymentInputChange}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                        paymentErrors.phone_number ? "border-red-500" : "border-gray-300"
+                      }`}
+                      placeholder="+255 XXX XXX XXX"
+                    />
+                    {paymentErrors.phone_number && <p className="text-red-500 text-sm mt-1">{paymentErrors.phone_number}</p>}
+                  </div>
+                </div>
+              )}
+              
+              {/* Bank Transfer Form */}
+              {paymentMethod === "bank_transfer" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Bank Name *</label>
+                    <input
+                      type="text"
+                      name="bank_name"
+                      value={paymentData.bank_name}
+                      onChange={handlePaymentInputChange}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                        paymentErrors.bank_name ? "border-red-500" : "border-gray-300"
+                      }`}
+                      placeholder="Your Bank Name"
+                    />
+                    {paymentErrors.bank_name && <p className="text-red-500 text-sm mt-1">{paymentErrors.bank_name}</p>}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Account Number *</label>
+                    <input
+                      type="text"
+                      name="account_number"
+                      value={paymentData.account_number}
+                      onChange={handlePaymentInputChange}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                        paymentErrors.account_number ? "border-red-500" : "border-gray-300"
+                      }`}
+                      placeholder="Account Number"
+                    />
+                    {paymentErrors.account_number && <p className="text-red-500 text-sm mt-1">{paymentErrors.account_number}</p>}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Routing Number *</label>
+                    <input
+                      type="text"
+                      name="routing_number"
+                      value={paymentData.routing_number}
+                      onChange={handlePaymentInputChange}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                        paymentErrors.routing_number ? "border-red-500" : "border-gray-300"
+                      }`}
+                      placeholder="Routing Number"
+                    />
+                    {paymentErrors.routing_number && <p className="text-red-500 text-sm mt-1">{paymentErrors.routing_number}</p>}
+                  </div>
+                </div>
+              )}
+              
+              {/* PAPSS Form */}
+              {paymentMethod === "papss" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">PAPSS Reference *</label>
+                    <input
+                      type="text"
+                      name="papss_reference"
+                      value={paymentData.papss_reference}
+                      onChange={handlePaymentInputChange}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                        paymentErrors.papss_reference ? "border-red-500" : "border-gray-300"
+                      }`}
+                      placeholder="PAPSS Reference Number"
+                    />
+                    {paymentErrors.papss_reference && <p className="text-red-500 text-sm mt-1">{paymentErrors.papss_reference}</p>}
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-blue-800 text-sm">
+                      <strong>PAPSS Payment:</strong> Please ensure you have a valid PAPSS reference number from your bank before proceeding.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {paymentErrors.submit && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-800">{paymentErrors.submit}</p>
+                </div>
+              )}
+              
+              {/* Submit Button */}
+              <div className="mt-8">
+                <button
+                  onClick={handleSubmitPayment}
+                  disabled={loading}
+                  className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {loading ? "Processing Payment..." : `Pay $${selectedPlan.price} Now`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Enhanced Leaderboard Section with Cause Reports
 const LeaderboardSection = () => {
   const [businessLeaderboard, setBusinessLeaderboard] = useState([]);
