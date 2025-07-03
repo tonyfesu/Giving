@@ -2145,13 +2145,16 @@ async def get_cause_comments(cause_id: str):
     }
 
 @api_router.post("/causes/{cause_id}/comments")
-async def create_cause_comment(cause_id: str, comment_data: CommentCreate, user_id: str, user_type: str):
+async def create_cause_comment(cause_id: str, comment_data: CommentCreate):
     """Create a comment on a cause"""
     cause = await db.causes.find_one({"id": cause_id})
     if not cause:
         raise HTTPException(status_code=404, detail="Cause not found")
     
-    # Get user information
+    # Get user information from comment data
+    user_id = comment_data.user_id
+    user_type = comment_data.user_type
+    
     if user_type == "business":
         user = await db.businesses.find_one({"id": user_id})
         user_name = user["name"] if user else "Unknown Business"
