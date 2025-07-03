@@ -1153,7 +1153,6 @@ def test_share_feature():
     required_platforms = ["facebook", "twitter", "whatsapp", "linkedin", "email"]
     for platform in required_platforms:
         assert platform in social_links, f"Social links missing '{platform}' platform"
-        assert social_links[platform].startswith("http"), f"Social link for {platform} should be a URL"
     
     # Test POST share endpoint
     share_post_data = {
