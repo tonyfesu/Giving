@@ -2090,14 +2090,17 @@ async def track_cause_share(cause_id: str, share_data: dict):
         "share_url": share_url,
         "shared_by": share_data.get("user_id"),
         "platform": share_data.get("platform", "link"),
-        "created_at": datetime.utcnow()
+        "created_at": datetime.utcnow().isoformat()  # Convert to ISO format string
     }
     
-    await db.cause_shares.insert_one(share_record)
+    # Insert into database with datetime object
+    db_record = share_record.copy()
+    db_record["created_at"] = datetime.utcnow()  # Store as datetime in DB
+    await db.cause_shares.insert_one(db_record)
     
     return {
         "message": "Share tracked successfully",
-        "share_record": share_record,
+        "share_record": share_record,  # Returns with ISO format string
         "share_url": share_url,
         "social_links": {
             "facebook": f"https://www.facebook.com/sharer/sharer.php?u={share_url}",
