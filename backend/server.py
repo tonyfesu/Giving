@@ -1381,7 +1381,7 @@ async def get_api_documentation():
         "title": "Nnoboa Developer API",
         "version": "4.0",
         "description": "Complete API for integrating social impact into your applications",
-        "base_url": "https://api.impactlink.com",
+        "base_url": "https://api.nnoboa.com",
         "authentication": {
             "type": "API Key",
             "header": "Authorization: Bearer YOUR_API_KEY",
