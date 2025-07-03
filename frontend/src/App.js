@@ -569,6 +569,26 @@ const CauseBrowser = () => {
                       ))}
                     </div>
 
+                    {/* USSD Shortcode */}
+                    {cause.ussd_shortcode && (
+                      <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-sm font-medium text-blue-800 mb-1">📱 Donate via USSD:</p>
+                        <div className="flex items-center gap-2">
+                          <code className="text-sm font-mono bg-white px-2 py-1 rounded border text-blue-900">
+                            {cause.ussd_shortcode}
+                          </code>
+                          <button
+                            onClick={() => navigator.clipboard?.writeText(cause.ussd_shortcode)}
+                            className="text-blue-600 hover:text-blue-800 text-xs"
+                            title="Copy USSD code"
+                          >
+                            📋
+                          </button>
+                        </div>
+                        <p className="text-xs text-blue-600 mt-1">Replace [Amount] with your donation amount</p>
+                      </div>
+                    )}
+
                     {/* Volunteer Opportunities */}
                     {cause.volunteer_opportunities && cause.volunteer_opportunities.length > 0 && (
                       <div className="mb-3">
