@@ -323,9 +323,9 @@ backend:
     implemented: true
     working: false
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "testing"
@@ -333,6 +333,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "Emoji reactions system has issues. GET /api/causes/{cause_id}/reactions endpoint is missing the 'reactions' field in the response. POST and DELETE endpoints also have issues, likely requiring user_id and user_type parameters similar to the comments system."
+      - working: false
+        agent: "testing"
+        comment: "Emoji reactions system is partially fixed. GET /api/causes/{cause_id}/reactions now includes the 'reactions' field in the response. However, POST /api/causes/{cause_id}/reactions returns a 404 Not Found error even when user_id and user_type are included in the request body. DELETE /api/causes/{cause_id}/reactions also returns a 404 Not Found error."
 
   - task: "Developer Platform API"
     implemented: true
