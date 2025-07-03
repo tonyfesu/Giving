@@ -85,10 +85,21 @@ class Customer(BaseModel):
     name: str
     email: str
     phone: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    postal_code: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    occupation: Optional[str] = None
+    interests: List[str] = Field(default_factory=list)
+    bio: Optional[str] = None
     account_number: str = Field(default_factory=generate_account_number)
     preferred_causes: List[str] = Field(default_factory=list)  # cause IDs
     payment_methods: List[PaymentMethod] = Field(default_factory=list)
     settlement_info: Optional[SettlementInfo] = None
+    newsletter_subscription: bool = False
+    marketing_consent: bool = False
     total_contributions: float = 0.0
     contribution_count: int = 0
     badges: List[str] = Field(default_factory=list)
