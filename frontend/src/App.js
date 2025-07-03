@@ -2754,6 +2754,8 @@ const PostRegistrationSubscription = ({ userData, userType, onSubscriptionComple
     </div>
   );
 };
+
+const BusinessDashboard = ({ business }) => {
   const [dashboardData, setDashboardData] = useState(null);
   const [causes, setCauses] = useState([]);
   const [comments, setComments] = useState({});
