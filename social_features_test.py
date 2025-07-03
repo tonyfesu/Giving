@@ -137,8 +137,23 @@ def test_track_cause_share():
         assert response.status_code == 200, f"Expected status code 200 for {platform} share, got {response.status_code}"
         
         result = response.json()
-        assert "message" in result, f"Share tracking response for {platform} missing 'message' field"
-        assert result["message"] == "Share tracked successfully", f"Unexpected message for {platform} share: {result['message']}"
+        
+        # Verify response structure
+        assert "share_record" in result, f"Share tracking response for {platform} missing 'share_record' field"
+        assert "share_url" in result, f"Share tracking response for {platform} missing 'share_url' field"
+        assert "social_links" in result, f"Share tracking response for {platform} missing 'social_links' field"
+        
+        # Verify share record
+        share_record = result["share_record"]
+        assert "id" in share_record, "Share record missing 'id' field"
+        assert "cause_id" in share_record, "Share record missing 'cause_id' field"
+        assert "shared_by" in share_record, "Share record missing 'shared_by' field"
+        assert "platform" in share_record, "Share record missing 'platform' field"
+        assert "created_at" in share_record, "Share record missing 'created_at' field"
+        
+        assert share_record["cause_id"] == cause_id, f"Expected cause_id {cause_id}, got {share_record['cause_id']}"
+        assert share_record["shared_by"] == demo_data["customer"]["id"], f"Expected shared_by {demo_data['customer']['id']}, got {share_record['shared_by']}"
+        assert share_record["platform"] == platform, f"Expected platform '{platform}', got {share_record['platform']}"
     
     # Test anonymous share (no user_id)
     share_data = {
