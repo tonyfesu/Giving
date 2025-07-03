@@ -394,7 +394,8 @@ def test_emoji_reactions():
     }
     
     response = requests.post(
-        f"{API_URL}/causes/{cause_id}/reactions?user_id=test_user&user_name=Test User", 
+        f"{API_URL}/causes/{cause_id}/reactions", 
+        params={"user_id": "test_user", "user_name": "Test User"},
         json=reaction_data
     )
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
@@ -417,7 +418,8 @@ def test_emoji_reactions():
     }
     
     response = requests.post(
-        f"{API_URL}/causes/{cause_id}/reactions?user_id=test_user&user_name=Test User", 
+        f"{API_URL}/causes/{cause_id}/reactions", 
+        params={"user_id": "test_user", "user_name": "Test User"},
         json=reaction_data
     )
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
@@ -434,7 +436,7 @@ def test_emoji_reactions():
     assert updated_reactions["user_reactions"]["test_user"] == "👍", f"Expected user reaction '👍', got {updated_reactions['user_reactions']['test_user']}"
     
     # Delete reaction
-    response = requests.delete(f"{API_URL}/causes/{cause_id}/reactions?user_id=test_user")
+    response = requests.delete(f"{API_URL}/causes/{cause_id}/reactions", params={"user_id": "test_user"})
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
     
     # Get final reactions
