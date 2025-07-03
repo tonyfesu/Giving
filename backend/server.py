@@ -1080,8 +1080,75 @@ async def process_payment(payment_data: dict):
         raise HTTPException(status_code=500, detail=f"Payment processing failed: {str(e)}")
 
 # Subscription endpoints
-@api_router.post("/subscriptions", response_model=Subscription)
-async def create_subscription(subscription_data: SubscriptionCreate, user_id: str, user_type: str):
+@api_router.post("/subscriptions")
+async def create_subscription(subscription_data: dict):
+    """Create a new subscription"""
+    try:
+        user_id = subscription_data.get("user_id")
+        user_type = subscription_data.get("user_type")
+        plan_id = subscription_data.get("plan_id")
+        plan_name = subscription_data.get("plan_name")
+        price = subscription_data.get("price", 0)
+        billing_cycle = subscription_data.get("billing_cycle", "monthly")
+        
+        if not user_id or not user_type or not plan_id:
+            raise HTTPException(status_code=400, detail="Missing required subscription data")
+        
+        if user_type not in ["customer", "business"]:
+            raise HTTPException(status_code=400, detail="Invalid user type")
+        
+        # Get user
+        collection = db.customers if user_type == "customer" else db.businesses
+        user = await collection.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Calculate end date based on billing cycle
+        if billing_cycle == "monthly":
+            end_date = datetime.utcnow() + timedelta(days=30)
+        elif billing_cycle == "yearly":
+            end_date = datetime.utcnow() + timedelta(days=365)
+        else:
+            end_date = datetime.utcnow() + timedelta(days=30)
+        
+        # Create subscription record
+        subscription_record = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "user_type": user_type,
+            "plan_id": plan_id,
+            "plan_name": plan_name,
+            "price": price,
+            "billing_cycle": billing_cycle,
+            "status": "active",
+            "start_date": datetime.utcnow(),
+            "end_date": end_date,
+            "auto_renew": True,
+            "created_at": datetime.utcnow()
+        }
+        
+        # Store subscription
+        await db.subscriptions.insert_one(subscription_record)
+        
+        # Update user with subscription
+        await collection.update_one(
+            {"id": user_id},
+            {"$set": {"subscription": subscription_record}}
+        )
+        
+        return {
+            "id": subscription_record["id"],
+            "status": "active",
+            "plan_name": plan_name,
+            "price": price,
+            "billing_cycle": billing_cycle,
+            "message": "Subscription created successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Subscription creation failed: {str(e)}")
     if user_type not in ["customer", "business"]:
         raise HTTPException(status_code=400, detail="Invalid user type")
     
