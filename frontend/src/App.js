@@ -152,7 +152,155 @@ const CauseBrowser = () => {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [anonymousName, setAnonymousName] = useState("");
   const [anonymousEmail, setAnonymousEmail] = useState("");
-  const { currentUser } = useUser();
+  
+  // Social features state
+  const [showComments, setShowComments] = useState({});
+  const [comments, setComments] = useState({});
+  const [reactions, setReactions] = useState({});
+  const [newComment, setNewComment] = useState("");
+  const [replyTo, setReplyTo] = useState(null);
+  
+  const { currentUser, userType } = useUser();
+
+  useEffect(() => {
+    fetchCauses();
+  }, [filters]);
+
+  const fetchCauses = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.category) params.append('category', filters.category);
+      if (filters.expired !== null) params.append('expired', filters.expired);
+      params.append('sort_by', filters.sort_by);
+      params.append('sort_order', filters.sort_order);
+      params.append('active_only', 'false'); // Show all causes including expired
+
+      const response = await axios.get(`${API}/causes?${params}`);
+      setCauses(response.data);
+      setFilteredCauses(response.data);
+      
+      // Fetch reactions for all causes
+      for (const cause of response.data) {
+        fetchCauseReactions(cause.id);
+      }
+    } catch (error) {
+      console.error("Error fetching causes:", error);
+    }
+  };
+
+  // Social features functions
+  const fetchCauseReactions = async (causeId) => {
+    try {
+      const response = await axios.get(`${API}/causes/${causeId}/reactions`);
+      setReactions(prev => ({
+        ...prev,
+        [causeId]: response.data
+      }));
+    } catch (error) {
+      console.error("Error fetching reactions:", error);
+    }
+  };
+
+  const fetchCauseComments = async (causeId) => {
+    try {
+      const response = await axios.get(`${API}/causes/${causeId}/comments`);
+      setComments(prev => ({
+        ...prev,
+        [causeId]: response.data
+      }));
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+    }
+  };
+
+  const addReaction = async (causeId, emoji) => {
+    if (!currentUser) {
+      alert("Please log in to react to causes");
+      return;
+    }
+
+    try {
+      await axios.post(`${API}/causes/${causeId}/reactions?user_id=${currentUser.id}&user_type=${userType}`, {
+        emoji: emoji
+      });
+      fetchCauseReactions(causeId);
+    } catch (error) {
+      console.error("Error adding reaction:", error);
+    }
+  };
+
+  const removeReaction = async (causeId) => {
+    if (!currentUser) return;
+
+    try {
+      await axios.delete(`${API}/causes/${causeId}/reactions?user_id=${currentUser.id}`);
+      fetchCauseReactions(causeId);
+    } catch (error) {
+      console.error("Error removing reaction:", error);
+    }
+  };
+
+  const addComment = async (causeId, commentText, parentId = null) => {
+    if (!currentUser) {
+      alert("Please log in to comment");
+      return;
+    }
+
+    if (!commentText.trim()) return;
+
+    try {
+      await axios.post(`${API}/causes/${causeId}/comments?user_id=${currentUser.id}&user_type=${userType}`, {
+        comment: commentText,
+        parent_comment_id: parentId
+      });
+      
+      setNewComment("");
+      setReplyTo(null);
+      fetchCauseComments(causeId);
+    } catch (error) {
+      console.error("Error adding comment:", error);
+    }
+  };
+
+  const shareCause = async (causeId, platform = 'link') => {
+    try {
+      const response = await axios.get(`${API}/causes/${causeId}/share`);
+      const shareData = response.data;
+      
+      if (platform === 'copy') {
+        navigator.clipboard.writeText(shareData.share_url);
+        alert("Link copied to clipboard!");
+      } else if (platform === 'link') {
+        // Just copy the link
+        navigator.clipboard.writeText(shareData.share_url);
+        alert("Share link copied to clipboard!");
+      } else {
+        // Open social platform
+        window.open(shareData.social_links[platform], '_blank');
+      }
+
+      // Track share
+      if (currentUser) {
+        await axios.post(`${API}/causes/${causeId}/share`, {
+          user_id: currentUser.id,
+          platform: platform
+        });
+      }
+    } catch (error) {
+      console.error("Error sharing cause:", error);
+    }
+  };
+
+  const toggleComments = (causeId) => {
+    setShowComments(prev => ({
+      ...prev,
+      [causeId]: !prev[causeId]
+    }));
+    
+    if (!comments[causeId]) {
+      fetchCauseComments(causeId);
+    }
+  };
 
   useEffect(() => {
     fetchCauses();
