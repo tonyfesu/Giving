@@ -215,18 +215,15 @@ def test_create_cause_comment():
     cause_id = demo_data["cause"]["id"]
     
     # Test comment creation as customer
+    customer_id = demo_data["customer"]["id"]
     customer_comment_data = {
         "comment": "This is a test comment from a customer",
-        "parent_comment_id": None
+        "parent_comment_id": None,
+        "user_id": customer_id,
+        "user_type": "customer"
     }
     
-    customer_id = demo_data["customer"]["id"]
-    
-    # Send user_id and user_type as query parameters
-    response = requests.post(
-        f"{API_URL}/causes/{cause_id}/comments?user_id={customer_id}&user_type=customer", 
-        json=customer_comment_data
-    )
+    response = requests.post(f"{API_URL}/causes/{cause_id}/comments", json=customer_comment_data)
     assert response.status_code == 200, f"Expected status code 200 for customer comment, got {response.status_code}"
     
     customer_comment = response.json()
@@ -241,18 +238,15 @@ def test_create_cause_comment():
     customer_comment_id = customer_comment["id"]
     
     # Test comment creation as business
+    business_id = demo_data["business"]["id"]
     business_comment_data = {
         "comment": "This is a test comment from a business",
-        "parent_comment_id": None
+        "parent_comment_id": None,
+        "user_id": business_id,
+        "user_type": "business"
     }
     
-    business_id = demo_data["business"]["id"]
-    
-    # Send user_id and user_type as query parameters
-    response = requests.post(
-        f"{API_URL}/causes/{cause_id}/comments?user_id={business_id}&user_type=business", 
-        json=business_comment_data
-    )
+    response = requests.post(f"{API_URL}/causes/{cause_id}/comments", json=business_comment_data)
     assert response.status_code == 200, f"Expected status code 200 for business comment, got {response.status_code}"
     
     business_comment = response.json()
@@ -266,14 +260,12 @@ def test_create_cause_comment():
     # Test reply to customer comment
     reply_data = {
         "comment": "This is a reply to the customer comment",
-        "parent_comment_id": customer_comment_id
+        "parent_comment_id": customer_comment_id,
+        "user_id": business_id,
+        "user_type": "business"
     }
     
-    # Send user_id and user_type as query parameters
-    response = requests.post(
-        f"{API_URL}/causes/{cause_id}/comments?user_id={business_id}&user_type=business", 
-        json=reply_data
-    )
+    response = requests.post(f"{API_URL}/causes/{cause_id}/comments", json=reply_data)
     assert response.status_code == 200, f"Expected status code 200 for reply, got {response.status_code}"
     
     reply = response.json()
@@ -302,17 +294,18 @@ def test_create_cause_comment():
     assert found_reply, "Could not find our test reply in the replies list"
     
     # Test with invalid cause ID
-    response = requests.post(
-        f"{API_URL}/causes/invalid-id/comments?user_id={customer_id}&user_type=customer", 
-        json=customer_comment_data
-    )
+    response = requests.post(f"{API_URL}/causes/invalid-id/comments", json=customer_comment_data)
     assert response.status_code == 404, f"Expected status code 404 for invalid cause ID, got {response.status_code}"
     
     # Test with invalid user type
-    response = requests.post(
-        f"{API_URL}/causes/{cause_id}/comments?user_id={customer_id}&user_type=invalid_type", 
-        json=customer_comment_data
-    )
+    invalid_user_data = {
+        "comment": "This is a test comment",
+        "parent_comment_id": None,
+        "user_id": customer_id,
+        "user_type": "invalid_type"
+    }
+    
+    response = requests.post(f"{API_URL}/causes/{cause_id}/comments", json=invalid_user_data)
     assert response.status_code == 400, f"Expected status code 400 for invalid user type, got {response.status_code}"
     
     return True
