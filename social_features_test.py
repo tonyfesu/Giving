@@ -415,12 +415,14 @@ def test_remove_cause_reaction():
     
     # First, make sure the customer has a reaction
     customer_reaction = {
-        "emoji": "❤️",
-        "user_id": customer_id,
-        "user_type": "customer"
+        "emoji": "❤️"
     }
     
-    response = requests.post(f"{API_URL}/causes/{cause_id}/reactions", json=customer_reaction)
+    # Send user_id and user_type as query parameters
+    response = requests.post(
+        f"{API_URL}/causes/{cause_id}/reactions?user_id={customer_id}&user_type=customer", 
+        json=customer_reaction
+    )
     assert response.status_code == 200, f"Expected status code 200 for customer reaction, got {response.status_code}"
     
     # Now remove the reaction
