@@ -128,17 +128,36 @@ class CustomerCreate(BaseModel):
 
 class Business(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    description: str
+    name: str  # Business name (will use business_name from create data)
+    contact_person: Optional[str] = None  # Contact person name
+    description: Optional[str] = None
     industry: str
-    email: str
+    business_type: Optional[str] = None
+    company_size: Optional[str] = None
+    tax_id: Optional[str] = None
+    email: str  # Contact email
     phone: Optional[str] = None
     website: Optional[str] = None
+    # Contact person address
+    contact_address: Optional[str] = None
+    contact_city: Optional[str] = None
+    contact_state: Optional[str] = None
+    contact_country: Optional[str] = None
+    contact_postal_code: Optional[str] = None
+    # Business address
+    business_address: Optional[str] = None
+    business_city: Optional[str] = None
+    business_state: Optional[str] = None
+    business_country: Optional[str] = None
+    business_postal_code: Optional[str] = None
+    bio: Optional[str] = None
     account_number: str = Field(default_factory=generate_account_number)
     api_key: str = Field(default_factory=create_api_key)
     preferred_causes: List[str] = Field(default_factory=list)  # cause IDs they want to support
     impact_allocations: Dict[str, float] = Field(default_factory=dict)
     settlement_info: Optional[SettlementInfo] = None
+    newsletter_subscription: bool = False
+    marketing_consent: bool = False
     total_sales: float = 0.0
     total_impact: float = 0.0
     transaction_count: int = 0
