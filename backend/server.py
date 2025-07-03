@@ -1579,9 +1579,9 @@ const comment = await client.causes.addComment('cause_id_here', {
         "python": {
             "install": "pip install nnoboa-python",
             "setup": """
-import impactlink
+import nnoboa
 
-client = impactlink.Client(
+client = nnoboa.Client(
     api_key='your_api_key_here',
     sandbox=True  # Use sandbox for testing
 )
