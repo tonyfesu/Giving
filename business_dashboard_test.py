@@ -190,6 +190,14 @@ def test_comment_system():
     initial_comments = response.json()
     print(f"Found {len(initial_comments)} existing comments for cause {business_causes[0]['name']}")
     
+    # First, get a valid customer ID
+    response = requests.get(f"{API_URL}/customers")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    customers = response.json()
+    assert len(customers) > 0, "Expected at least one customer"
+    customer_id = customers[0]["id"]
+    customer_name = customers[0]["name"]
+    
     # Create a new comment
     comment_data = {
         "comment": "This is a test comment from the testing agent",
@@ -202,7 +210,7 @@ def test_comment_system():
     # Add a comment as if from a customer
     response = requests.post(
         f"{API_URL}/causes/{cause_id}/comments", 
-        params={"user_id": "test_customer", "user_name": "Test Customer", "user_type": "customer"},
+        params={"user_id": customer_id, "user_name": customer_name, "user_type": "customer"},
         json=comment_data
     )
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
@@ -217,9 +225,15 @@ def test_comment_system():
         "parent_comment_id": customer_comment["id"]
     }
     
+    # Get business name
+    response = requests.get(f"{API_URL}/businesses/{business_id}")
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    business = response.json()
+    business_name = business["name"]
+    
     response = requests.post(
         f"{API_URL}/causes/{cause_id}/comments", 
-        params={"user_id": business_id, "user_name": business_causes[0]["creator_name"], "user_type": "business"},
+        params={"user_id": business_id, "user_name": business_name, "user_type": "business"},
         json=reply_data
     )
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
