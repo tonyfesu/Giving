@@ -140,6 +140,7 @@ const CauseBrowser = () => {
   const [causes, setCauses] = useState([]);
   const [filteredCauses, setFilteredCauses] = useState([]);
   const [selectedCause, setSelectedCause] = useState(null);
+  const [showCreateCause, setShowCreateCause] = useState(false);
   const [filters, setFilters] = useState({
     category: "",
     expired: null,
