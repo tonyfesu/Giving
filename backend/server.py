@@ -895,10 +895,12 @@ async def create_cause(cause: CauseCreate):
     if cause.creator_type == "business" and creator.get("website"):
         cause_dict["creator_website"] = creator["website"]
     
+    # Create cause object first
     cause_obj = Cause(**cause_dict)
     
-    # Generate USSD shortcode
-    cause_obj.ussd_shortcode = f"*123*86*{cause_obj.cause_code}*[Amount]#"
+    # Ensure USSD shortcode is properly generated
+    if not cause_obj.ussd_shortcode:
+        cause_obj.ussd_shortcode = f"*123*86*{cause_obj.cause_code}*[Amount]#"
     
     await db.causes.insert_one(cause_obj.dict())
     
