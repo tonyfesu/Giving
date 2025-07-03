@@ -740,7 +740,7 @@ async def init_default_data():
             {
                 "id": str(uuid.uuid4()),
                 "username": "demo_admin",
-                "email": "demo.admin@impactlink.com",
+                "email": "demo.admin@nnoboa.com",
                 "role": "admin",
                 "created_at": datetime.utcnow()
             }
