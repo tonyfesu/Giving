@@ -1514,7 +1514,7 @@ const HeroSection = () => {
           />
         </div>
         <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-          Turn Every Sale Into 
+          Turn donations into 
           <span className="text-yellow-300"> Social Impact</span>
         </h1>
         <p className="text-xl md:text-2xl mb-8 opacity-90 max-w-3xl mx-auto">
