@@ -340,14 +340,12 @@ def test_add_cause_reaction():
     # Test adding reaction as customer
     customer_id = demo_data["customer"]["id"]
     customer_reaction = {
-        "emoji": "❤️"
+        "emoji": "❤️",
+        "user_id": customer_id,
+        "user_type": "customer"
     }
     
-    # Send user_id and user_type as query parameters
-    response = requests.post(
-        f"{API_URL}/causes/{cause_id}/reactions?user_id={customer_id}&user_type=customer", 
-        json=customer_reaction
-    )
+    response = requests.post(f"{API_URL}/causes/{cause_id}/reactions", json=customer_reaction)
     assert response.status_code == 200, f"Expected status code 200 for customer reaction, got {response.status_code}"
     
     result = response.json()
@@ -358,14 +356,12 @@ def test_add_cause_reaction():
     # Test adding reaction as business
     business_id = demo_data["business"]["id"]
     business_reaction = {
-        "emoji": "👍"
+        "emoji": "👍",
+        "user_id": business_id,
+        "user_type": "business"
     }
     
-    # Send user_id and user_type as query parameters
-    response = requests.post(
-        f"{API_URL}/causes/{cause_id}/reactions?user_id={business_id}&user_type=business", 
-        json=business_reaction
-    )
+    response = requests.post(f"{API_URL}/causes/{cause_id}/reactions", json=business_reaction)
     assert response.status_code == 200, f"Expected status code 200 for business reaction, got {response.status_code}"
     
     result = response.json()
@@ -373,14 +369,12 @@ def test_add_cause_reaction():
     
     # Test updating existing reaction
     updated_customer_reaction = {
-        "emoji": "🎉"
+        "emoji": "🎉",
+        "user_id": customer_id,
+        "user_type": "customer"
     }
     
-    # Send user_id and user_type as query parameters
-    response = requests.post(
-        f"{API_URL}/causes/{cause_id}/reactions?user_id={customer_id}&user_type=customer", 
-        json=updated_customer_reaction
-    )
+    response = requests.post(f"{API_URL}/causes/{cause_id}/reactions", json=updated_customer_reaction)
     assert response.status_code == 200, f"Expected status code 200 for updated reaction, got {response.status_code}"
     
     result = response.json()
@@ -392,7 +386,7 @@ def test_add_cause_reaction():
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
     
     reactions_data = response.json()
-    reaction_counts = reactions_data["reaction_counts"]
+    reaction_counts = reactions_data["reactions"]
     user_reactions = reactions_data["user_reactions"]
     
     assert "🎉" in reaction_counts, "Emoji 🎉 not found in reaction counts"
@@ -403,17 +397,17 @@ def test_add_cause_reaction():
     assert user_reactions[business_id] == "👍", f"Expected business reaction 👍, got {user_reactions[business_id]}"
     
     # Test with invalid cause ID
-    response = requests.post(
-        f"{API_URL}/causes/invalid-id/reactions?user_id={customer_id}&user_type=customer", 
-        json=customer_reaction
-    )
+    response = requests.post(f"{API_URL}/causes/invalid-id/reactions", json=customer_reaction)
     assert response.status_code == 404, f"Expected status code 404 for invalid cause ID, got {response.status_code}"
     
     # Test with invalid user type
-    response = requests.post(
-        f"{API_URL}/causes/{cause_id}/reactions?user_id={customer_id}&user_type=invalid_type", 
-        json=customer_reaction
-    )
+    invalid_reaction = {
+        "emoji": "❤️",
+        "user_id": customer_id,
+        "user_type": "invalid_type"
+    }
+    
+    response = requests.post(f"{API_URL}/causes/{cause_id}/reactions", json=invalid_reaction)
     assert response.status_code == 400, f"Expected status code 400 for invalid user type, got {response.status_code}"
     
     return True
