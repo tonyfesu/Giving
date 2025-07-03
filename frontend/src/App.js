@@ -1601,9 +1601,929 @@ const FeaturesSection = () => {
   );
 };
 
-// Placeholder components for brevity
-const CustomerRegistration = ({ onCustomerCreate }) => <div></div>;
-const BusinessSetup = ({ onBusinessCreate }) => <div></div>;
+// Comprehensive Registration Form
+const RegistrationForm = ({ onRegistrationComplete }) => {
+  const [registrationType, setRegistrationType] = useState("individual");
+  const [formData, setFormData] = useState({
+    // Common fields
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "",
+    postal_code: "",
+    
+    // Business-specific fields
+    business_name: "",
+    industry: "",
+    website: "",
+    company_size: "",
+    business_type: "",
+    tax_id: "",
+    business_address: "",
+    business_city: "",
+    business_state: "",
+    business_country: "",
+    business_postal_code: "",
+    
+    // Individual-specific fields
+    date_of_birth: "",
+    occupation: "",
+    interests: [],
+    
+    // Preferences
+    preferred_causes: [],
+    newsletter_subscription: true,
+    marketing_consent: false,
+    
+    // Settlement information
+    settlement_type: "bank_transfer",
+    bank_name: "",
+    account_number: "",
+    routing_number: "",
+    swift_code: "",
+    mobile_money_provider: "",
+    mobile_money_number: "",
+    
+    // Profile
+    bio: "",
+    profile_image: ""
+  });
+  
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(1);
+  const [availableIndustries] = useState([
+    "Technology", "Healthcare", "Finance", "Education", "Retail", "Manufacturing",
+    "Food & Beverage", "Entertainment", "Real Estate", "Transportation", "Energy",
+    "Non-Profit", "Government", "Agriculture", "Fashion", "Sports", "Other"
+  ]);
+  
+  const [availableCauses] = useState([
+    "Education", "Healthcare", "Environment", "Poverty Alleviation", "Clean Water",
+    "Food Security", "Climate Change", "Animal Welfare", "Human Rights", "Arts & Culture"
+  ]);
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ""
+      }));
+    }
+  };
+
+  const handleArrayChange = (name, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: prev[name].includes(value) 
+        ? prev[name].filter(item => item !== value)
+        : [...prev[name], value]
+    }));
+  };
+
+  const validateStep = (stepNumber) => {
+    const newErrors = {};
+    
+    switch(stepNumber) {
+      case 1: // Basic Information
+        if (!formData.name.trim()) newErrors.name = "Name is required";
+        if (!formData.email.trim()) newErrors.email = "Email is required";
+        if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Email is invalid";
+        if (!formData.phone.trim()) newErrors.phone = "Phone is required";
+        
+        if (registrationType === "business") {
+          if (!formData.business_name.trim()) newErrors.business_name = "Business name is required";
+          if (!formData.industry) newErrors.industry = "Industry is required";
+          if (!formData.business_type) newErrors.business_type = "Business type is required";
+        } else {
+          if (!formData.date_of_birth) newErrors.date_of_birth = "Date of birth is required";
+        }
+        break;
+        
+      case 2: // Address Information
+        if (!formData.address.trim()) newErrors.address = "Address is required";
+        if (!formData.city.trim()) newErrors.city = "City is required";
+        if (!formData.state.trim()) newErrors.state = "State is required";
+        if (!formData.country.trim()) newErrors.country = "Country is required";
+        if (!formData.postal_code.trim()) newErrors.postal_code = "Postal code is required";
+        
+        if (registrationType === "business") {
+          if (!formData.business_address.trim()) newErrors.business_address = "Business address is required";
+          if (!formData.business_city.trim()) newErrors.business_city = "Business city is required";
+          if (!formData.business_state.trim()) newErrors.business_state = "Business state is required";
+          if (!formData.business_country.trim()) newErrors.business_country = "Business country is required";
+          if (!formData.business_postal_code.trim()) newErrors.business_postal_code = "Business postal code is required";
+        }
+        break;
+        
+      case 3: // Settlement Information
+        if (formData.settlement_type === "bank_transfer") {
+          if (!formData.bank_name.trim()) newErrors.bank_name = "Bank name is required";
+          if (!formData.account_number.trim()) newErrors.account_number = "Account number is required";
+          if (!formData.routing_number.trim()) newErrors.routing_number = "Routing number is required";
+        } else if (formData.settlement_type === "mobile_money") {
+          if (!formData.mobile_money_provider.trim()) newErrors.mobile_money_provider = "Mobile money provider is required";
+          if (!formData.mobile_money_number.trim()) newErrors.mobile_money_number = "Mobile money number is required";
+        }
+        break;
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep(step)) {
+      setStep(step + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    setStep(step - 1);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateStep(step)) return;
+    
+    setLoading(true);
+    
+    try {
+      let response;
+      
+      if (registrationType === "business") {
+        // Register business
+        const businessData = {
+          name: formData.business_name,
+          industry: formData.industry,
+          website: formData.website,
+          contact_email: formData.email,
+          contact_phone: formData.phone,
+          address: formData.business_address,
+          city: formData.business_city,
+          state: formData.business_state,
+          country: formData.business_country,
+          postal_code: formData.business_postal_code,
+          business_type: formData.business_type,
+          company_size: formData.company_size,
+          tax_id: formData.tax_id,
+          description: formData.bio,
+          settlement_info: {
+            type: formData.settlement_type,
+            bank_name: formData.bank_name,
+            account_number: formData.account_number,
+            routing_number: formData.routing_number,
+            swift_code: formData.swift_code,
+            mobile_money_provider: formData.mobile_money_provider,
+            mobile_money_number: formData.mobile_money_number
+          },
+          preferred_causes: formData.preferred_causes,
+          newsletter_subscription: formData.newsletter_subscription,
+          marketing_consent: formData.marketing_consent
+        };
+        
+        response = await axios.post(`${API}/businesses`, businessData);
+      } else {
+        // Register individual customer
+        const customerData = {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          country: formData.country,
+          postal_code: formData.postal_code,
+          date_of_birth: formData.date_of_birth,
+          occupation: formData.occupation,
+          interests: formData.interests,
+          bio: formData.bio,
+          settlement_info: {
+            type: formData.settlement_type,
+            bank_name: formData.bank_name,
+            account_number: formData.account_number,
+            routing_number: formData.routing_number,
+            swift_code: formData.swift_code,
+            mobile_money_provider: formData.mobile_money_provider,
+            mobile_money_number: formData.mobile_money_number
+          },
+          preferred_causes: formData.preferred_causes,
+          newsletter_subscription: formData.newsletter_subscription,
+          marketing_consent: formData.marketing_consent
+        };
+        
+        response = await axios.post(`${API}/customers`, customerData);
+      }
+      
+      // Pass the registered user data to parent component
+      onRegistrationComplete({
+        userData: response.data,
+        userType: registrationType === "business" ? "business" : "customer"
+      });
+      
+    } catch (error) {
+      console.error("Registration error:", error);
+      setErrors({
+        submit: error.response?.data?.message || "Registration failed. Please try again."
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderStep1 = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Account Type</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => setRegistrationType("individual")}
+            className={`p-4 border-2 rounded-lg text-left transition-all ${
+              registrationType === "individual" 
+                ? "border-blue-500 bg-blue-50 text-blue-800" 
+                : "border-gray-300 hover:border-gray-400"
+            }`}
+          >
+            <div className="font-semibold">Individual</div>
+            <div className="text-sm text-gray-600">Personal contributor account</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRegistrationType("business")}
+            className={`p-4 border-2 rounded-lg text-left transition-all ${
+              registrationType === "business" 
+                ? "border-blue-500 bg-blue-50 text-blue-800" 
+                : "border-gray-300 hover:border-gray-400"
+            }`}
+          >
+            <div className="font-semibold">Business</div>
+            <div className="text-sm text-gray-600">Company or organization account</div>
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {registrationType === "business" ? "Contact Person Name" : "Full Name"} *
+          </label>
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleInputChange}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+              errors.name ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="Enter your full name"
+          />
+          {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+              errors.email ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="Enter your email"
+          />
+          {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+          <input
+            type="tel"
+            name="phone"
+            value={formData.phone}
+            onChange={handleInputChange}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+              errors.phone ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="Enter your phone number"
+          />
+          {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+        </div>
+
+        {registrationType === "business" ? (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Business Name *</label>
+              <input
+                type="text"
+                name="business_name"
+                value={formData.business_name}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.business_name ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter business name"
+              />
+              {errors.business_name && <p className="text-red-500 text-sm mt-1">{errors.business_name}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Industry *</label>
+              <select
+                name="industry"
+                value={formData.industry}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.industry ? "border-red-500" : "border-gray-300"
+                }`}
+              >
+                <option value="">Select industry</option>
+                {availableIndustries.map(industry => (
+                  <option key={industry} value={industry}>{industry}</option>
+                ))}
+              </select>
+              {errors.industry && <p className="text-red-500 text-sm mt-1">{errors.industry}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Business Type *</label>
+              <select
+                name="business_type"
+                value={formData.business_type}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.business_type ? "border-red-500" : "border-gray-300"
+                }`}
+              >
+                <option value="">Select business type</option>
+                <option value="corporation">Corporation</option>
+                <option value="llc">LLC</option>
+                <option value="partnership">Partnership</option>
+                <option value="sole_proprietorship">Sole Proprietorship</option>
+                <option value="non_profit">Non-Profit</option>
+                <option value="other">Other</option>
+              </select>
+              {errors.business_type && <p className="text-red-500 text-sm mt-1">{errors.business_type}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Company Size</label>
+              <select
+                name="company_size"
+                value={formData.company_size}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select company size</option>
+                <option value="1-10">1-10 employees</option>
+                <option value="11-50">11-50 employees</option>
+                <option value="51-200">51-200 employees</option>
+                <option value="201-500">201-500 employees</option>
+                <option value="500+">500+ employees</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
+              <input
+                type="url"
+                name="website"
+                value={formData.website}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="https://yourwebsite.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tax ID</label>
+              <input
+                type="text"
+                name="tax_id"
+                value={formData.tax_id}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter tax ID"
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth *</label>
+              <input
+                type="date"
+                name="date_of_birth"
+                value={formData.date_of_birth}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.date_of_birth ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.date_of_birth && <p className="text-red-500 text-sm mt-1">{errors.date_of_birth}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Occupation</label>
+              <input
+                type="text"
+                name="occupation"
+                value={formData.occupation}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your occupation"
+              />
+            </div>
+          </>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Bio / Description</label>
+        <textarea
+          name="bio"
+          value={formData.bio}
+          onChange={handleInputChange}
+          rows={3}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          placeholder={registrationType === "business" ? "Tell us about your business..." : "Tell us about yourself..."}
+        />
+      </div>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          {registrationType === "business" ? "Contact" : "Personal"} Address
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Street Address *</label>
+            <input
+              type="text"
+              name="address"
+              value={formData.address}
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                errors.address ? "border-red-500" : "border-gray-300"
+              }`}
+              placeholder="Enter street address"
+            />
+            {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
+            <input
+              type="text"
+              name="city"
+              value={formData.city}
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                errors.city ? "border-red-500" : "border-gray-300"
+              }`}
+              placeholder="Enter city"
+            />
+            {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">State/Province *</label>
+            <input
+              type="text"
+              name="state"
+              value={formData.state}
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                errors.state ? "border-red-500" : "border-gray-300"
+              }`}
+              placeholder="Enter state/province"
+            />
+            {errors.state && <p className="text-red-500 text-sm mt-1">{errors.state}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Country *</label>
+            <input
+              type="text"
+              name="country"
+              value={formData.country}
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                errors.country ? "border-red-500" : "border-gray-300"
+              }`}
+              placeholder="Enter country"
+            />
+            {errors.country && <p className="text-red-500 text-sm mt-1">{errors.country}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code *</label>
+            <input
+              type="text"
+              name="postal_code"
+              value={formData.postal_code}
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                errors.postal_code ? "border-red-500" : "border-gray-300"
+              }`}
+              placeholder="Enter postal code"
+            />
+            {errors.postal_code && <p className="text-red-500 text-sm mt-1">{errors.postal_code}</p>}
+          </div>
+        </div>
+      </div>
+
+      {registrationType === "business" && (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Business Address</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Business Street Address *</label>
+              <input
+                type="text"
+                name="business_address"
+                value={formData.business_address}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.business_address ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter business street address"
+              />
+              {errors.business_address && <p className="text-red-500 text-sm mt-1">{errors.business_address}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Business City *</label>
+              <input
+                type="text"
+                name="business_city"
+                value={formData.business_city}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.business_city ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter business city"
+              />
+              {errors.business_city && <p className="text-red-500 text-sm mt-1">{errors.business_city}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Business State/Province *</label>
+              <input
+                type="text"
+                name="business_state"
+                value={formData.business_state}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.business_state ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter business state/province"
+              />
+              {errors.business_state && <p className="text-red-500 text-sm mt-1">{errors.business_state}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Business Country *</label>
+              <input
+                type="text"
+                name="business_country"
+                value={formData.business_country}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.business_country ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter business country"
+              />
+              {errors.business_country && <p className="text-red-500 text-sm mt-1">{errors.business_country}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Business Postal Code *</label>
+              <input
+                type="text"
+                name="business_postal_code"
+                value={formData.business_postal_code}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.business_postal_code ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter business postal code"
+              />
+              {errors.business_postal_code && <p className="text-red-500 text-sm mt-1">{errors.business_postal_code}</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Preferred Causes</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {availableCauses.map(cause => (
+            <label key={cause} className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.preferred_causes.includes(cause)}
+                onChange={() => handleArrayChange("preferred_causes", cause)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{cause}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {registrationType === "individual" && (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Interests</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {["Volunteering", "Fundraising", "Advocacy", "Community Events", "Online Campaigns", "Corporate Partnerships", "Grant Writing", "Environmental Action", "Social Media", "Direct Service"].map(interest => (
+              <label key={interest} className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.interests.includes(interest)}
+                  onChange={() => handleArrayChange("interests", interest)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">{interest}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Settlement Information</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          This information will be used for receiving payments when you create causes or receive donations.
+        </p>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Settlement Method *</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="radio"
+                name="settlement_type"
+                value="bank_transfer"
+                checked={formData.settlement_type === "bank_transfer"}
+                onChange={handleInputChange}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm">Bank Transfer</span>
+            </label>
+            <label className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="radio"
+                name="settlement_type"
+                value="mobile_money"
+                checked={formData.settlement_type === "mobile_money"}
+                onChange={handleInputChange}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm">Mobile Money</span>
+            </label>
+            <label className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="radio"
+                name="settlement_type"
+                value="papss"
+                checked={formData.settlement_type === "papss"}
+                onChange={handleInputChange}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm">PAPSS</span>
+            </label>
+          </div>
+        </div>
+
+        {formData.settlement_type === "bank_transfer" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Bank Name *</label>
+              <input
+                type="text"
+                name="bank_name"
+                value={formData.bank_name}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.bank_name ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter bank name"
+              />
+              {errors.bank_name && <p className="text-red-500 text-sm mt-1">{errors.bank_name}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Account Number *</label>
+              <input
+                type="text"
+                name="account_number"
+                value={formData.account_number}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.account_number ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter account number"
+              />
+              {errors.account_number && <p className="text-red-500 text-sm mt-1">{errors.account_number}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Routing Number *</label>
+              <input
+                type="text"
+                name="routing_number"
+                value={formData.routing_number}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.routing_number ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter routing number"
+              />
+              {errors.routing_number && <p className="text-red-500 text-sm mt-1">{errors.routing_number}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">SWIFT Code (for international)</label>
+              <input
+                type="text"
+                name="swift_code"
+                value={formData.swift_code}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter SWIFT code"
+              />
+            </div>
+          </div>
+        )}
+
+        {formData.settlement_type === "mobile_money" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider *</label>
+              <select
+                name="mobile_money_provider"
+                value={formData.mobile_money_provider}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.mobile_money_provider ? "border-red-500" : "border-gray-300"
+                }`}
+              >
+                <option value="">Select provider</option>
+                <option value="mtn">MTN Mobile Money</option>
+                <option value="vodafone">Vodafone Cash</option>
+                <option value="airtel">Airtel Money</option>
+                <option value="mpesa">M-Pesa</option>
+                <option value="other">Other</option>
+              </select>
+              {errors.mobile_money_provider && <p className="text-red-500 text-sm mt-1">{errors.mobile_money_provider}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Number *</label>
+              <input
+                type="text"
+                name="mobile_money_number"
+                value={formData.mobile_money_number}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.mobile_money_number ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter mobile money number"
+              />
+              {errors.mobile_money_number && <p className="text-red-500 text-sm mt-1">{errors.mobile_money_number}</p>}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Preferences</h3>
+        <div className="space-y-3">
+          <label className="flex items-center space-x-3 cursor-pointer">
+            <input
+              type="checkbox"
+              name="newsletter_subscription"
+              checked={formData.newsletter_subscription}
+              onChange={handleInputChange}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">Subscribe to newsletter for updates about causes and impact</span>
+          </label>
+          
+          <label className="flex items-center space-x-3 cursor-pointer">
+            <input
+              type="checkbox"
+              name="marketing_consent"
+              checked={formData.marketing_consent}
+              onChange={handleInputChange}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">I consent to receiving marketing communications</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Join Nnoboa</h1>
+            <p className="text-gray-600">Create your account to start making a social impact</p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Step {step} of 3</span>
+              <span className="text-sm font-medium text-gray-700">{Math.round((step / 3) * 100)}% Complete</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                style={{ width: `${(step / 3) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            {step === 1 && renderStep1()}
+            {step === 2 && renderStep2()}
+            {step === 3 && renderStep3()}
+
+            {errors.submit && (
+              <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700">{errors.submit}</p>
+              </div>
+            )}
+
+            <div className="mt-8 flex justify-between">
+              <button
+                type="button"
+                onClick={handlePrevious}
+                className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                  step === 1 
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+                disabled={step === 1}
+              >
+                Previous
+              </button>
+
+              {step < 3 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all"
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Creating Account...
+                    </>
+                  ) : (
+                    "Create Account"
+                  )}
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
 const BusinessDashboard = ({ business }) => {
   const [dashboardData, setDashboardData] = useState(null);
   const [causes, setCauses] = useState([]);
