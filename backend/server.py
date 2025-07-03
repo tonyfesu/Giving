@@ -303,6 +303,8 @@ class CauseComment(BaseModel):
 class CommentCreate(BaseModel):
     comment: str
     parent_comment_id: Optional[str] = None
+    user_id: str
+    user_type: str
 
 class EmojiReaction(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
