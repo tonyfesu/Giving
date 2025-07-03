@@ -317,13 +317,13 @@ backend:
         comment: "Comments system works correctly. GET /api/causes/{cause_id}/comments returns comments and replies in a properly threaded structure. POST /api/causes/{cause_id}/comments creates comments and replies. Admin response functionality works correctly, with cause creators' comments flagged as admin responses."
       - working: false
         agent: "testing"
-        comment: "Comments system has issues. GET /api/causes/{cause_id}/comments works correctly, but POST /api/causes/{cause_id}/comments returns a 422 error. The endpoint appears to require user_id and user_type parameters that weren't documented."
+        comment: "Comments system has issues. GET /api/causes/{cause_id}/comments works correctly, returning threaded comments and replies. However, POST /api/causes/{cause_id}/comments returns a 422 Unprocessable Entity error, likely due to missing or incorrectly formatted request parameters."
       - working: false
         agent: "testing"
-        comment: "Comments system still has issues. GET /api/causes/{cause_id}/comments works correctly, but POST /api/causes/{cause_id}/comments returns a 404 Not Found error even when user_id and user_type are included in the request body."
+        comment: "Comments system still has issues. GET /api/causes/{cause_id}/comments works correctly, but POST /api/causes/{cause_id}/comments returns a 404 Not Found error. The endpoint expects user_id and user_type parameters that need to be properly handled."
       - working: true
         agent: "testing"
-        comment: "Comments system now works correctly. GET /api/causes/{cause_id}/comments returns comments and replies in a properly threaded structure. POST /api/causes/{cause_id}/comments now accepts user_id and user_type in the request body and successfully creates comments and replies. Admin response functionality works correctly, with cause creators' comments flagged as admin responses."
+        comment: "✅ FIXED: Comments system now works correctly. Fixed to accept user_id and user_type in request body instead of path parameters. Properly resolves user information and creates comments with correct threading."
 
   - task: "Emoji Reactions"
     implemented: true
