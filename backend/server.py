@@ -2061,6 +2061,386 @@ async def get_demo_users():
 # Enhanced Admin Settlement Endpoints
 @api_router.get("/admin/settlements")
 async def get_admin_settlements():
+    # Settlement overview
+    settlements = await db.cause_settlements.find().to_list(1000)
+    if not settlements:
+        # If no settlements, create them based on existing causes
+        causes = await db.causes.find().to_list(1000)
+        for cause in causes:
+            # Calculate direct donations for this cause
+            direct_donations = await db.direct_contributions.aggregate([
+                {"$match": {"cause_id": cause["id"]}},
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+            ]).to_list(1)
+            
+            # Calculate business donations through transactions
+            business_donations = await db.transactions.aggregate([
+                {"$match": {f"impact_breakdown.{cause['id']}": {"$exists": True}}},
+                {"$group": {"_id": None, "total": {"$sum": f"$impact_breakdown.{cause['id']}.amount"}}}
+            ]).to_list(1)
+            
+            direct_total = direct_donations[0]["total"] if direct_donations else 0.0
+            business_total = business_donations[0]["total"] if business_donations else 0.0
+            total_donations = direct_total + business_total
+            
+            settlement = CauseSettlement(
+                cause_id=cause["id"],
+                total_donations_received=total_donations,
+                pending_amount=total_donations,
+                total_settled=0.0
+            )
+            await db.cause_settlements.insert_one(settlement.dict())
+        
+        # Fetch settlements again
+        settlements = await db.cause_settlements.find().to_list(1000)
+    
+    # Enhance settlement data with cause information
+    enhanced_settlements = []
+    for settlement in settlements:
+        cause = await db.causes.find_one({"id": settlement["cause_id"]})
+        if cause:
+            enhanced_settlement = {
+                **settlement,
+                "cause_name": cause["name"],
+                "cause_category": cause["category"],
+                "creator_name": cause["creator_name"],
+                "creator_type": cause["creator_type"]
+            }
+            enhanced_settlements.append(enhanced_settlement)
+    
+    return {
+        "settlements": enhanced_settlements,
+        "summary": {
+            "total_causes": len(enhanced_settlements),
+            "total_raised": sum(s["total_donations_received"] for s in settlements),
+            "total_pending": sum(s["pending_amount"] for s in settlements),
+            "total_settled": sum(s["total_settled"] for s in settlements)
+        }
+    }
+
+@api_router.get("/admin/performance-metrics")
+async def get_admin_performance_metrics():
+    """Enhanced admin dashboard with comprehensive performance metrics"""
+    # Check and update expired causes
+    await check_cause_expiry()
+    
+    # Basic Platform Statistics
+    total_businesses = await db.businesses.count_documents({})
+    total_customers = await db.customers.count_documents({})
+    total_admins = await db.admin_users.count_documents({})
+    total_users = total_businesses + total_customers + total_admins
+    
+    # Cause Statistics
+    total_causes = await db.causes.count_documents({})
+    active_causes = await db.causes.count_documents({"active": True})
+    expired_causes = await db.causes.count_documents({"expired": True})
+    featured_causes = await db.causes.count_documents({"featured": True})
+    
+    # Transaction & Contribution Statistics
+    total_transactions = await db.transactions.count_documents({})
+    total_contributions = await db.direct_contributions.count_documents({})
+    anonymous_contributions = await db.direct_contributions.count_documents({"customer_id": None})
+    registered_contributions = total_contributions - anonymous_contributions
+    
+    # Subscription Statistics
+    total_subscriptions = await db.subscriptions.count_documents({})
+    active_subscriptions = await db.subscriptions.count_documents({"status": "active"})
+    expired_subscriptions = await db.subscriptions.count_documents({"status": "expired"})
+    cancelled_subscriptions = await db.subscriptions.count_documents({"status": "cancelled"})
+    
+    # Financial Metrics - Business Impact
+    business_financial = await db.businesses.aggregate([
+        {"$group": {
+            "_id": None,
+            "total_sales": {"$sum": "$total_sales"},
+            "total_impact": {"$sum": "$total_impact"},
+            "avg_impact": {"$avg": "$total_impact"}
+        }}
+    ]).to_list(1)
+    
+    # Financial Metrics - Customer Contributions
+    customer_financial = await db.customers.aggregate([
+        {"$group": {
+            "_id": None,
+            "total_contributions": {"$sum": "$total_contributions"},
+            "avg_contribution": {"$avg": "$total_contributions"},
+            "total_contribution_count": {"$sum": "$contribution_count"}
+        }}
+    ]).to_list(1)
+    
+    # Direct Contributions Financial
+    contributions_financial = await db.direct_contributions.aggregate([
+        {"$group": {
+            "_id": None,
+            "total_amount": {"$sum": "$amount"},
+            "avg_amount": {"$avg": "$amount"},
+            "max_amount": {"$max": "$amount"},
+            "min_amount": {"$min": "$amount"}
+        }}
+    ]).to_list(1)
+    
+    # Transaction Financial Metrics
+    transaction_financial = await db.transactions.aggregate([
+        {"$group": {
+            "_id": None,
+            "total_sales": {"$sum": "$amount"},
+            "total_impact": {"$sum": "$total_impact_amount"},
+            "avg_sale": {"$avg": "$amount"},
+            "avg_impact": {"$avg": "$total_impact_amount"}
+        }}
+    ]).to_list(1)
+    
+    # Subscription Revenue
+    subscription_revenue = await db.subscriptions.aggregate([
+        {"$group": {
+            "_id": None,
+            "total_revenue": {"$sum": "$amount"},
+            "avg_revenue": {"$avg": "$amount"}
+        }}
+    ]).to_list(1)
+    
+    # Payment Method Analysis
+    payment_methods = await db.direct_contributions.aggregate([
+        {"$group": {
+            "_id": "$payment.method.type",
+            "count": {"$sum": 1},
+            "total_amount": {"$sum": "$amount"},
+            "avg_amount": {"$avg": "$amount"}
+        }},
+        {"$sort": {"count": -1}}
+    ]).to_list(10)
+    
+    # Cause Category Performance
+    cause_categories = await db.causes.aggregate([
+        {"$group": {
+            "_id": "$category",
+            "count": {"$sum": 1},
+            "total_raised": {"$sum": "$total_raised"},
+            "avg_raised": {"$avg": "$total_raised"},
+            "active_count": {"$sum": {"$cond": ["$active", 1, 0]}}
+        }},
+        {"$sort": {"total_raised": -1}}
+    ]).to_list(20)
+    
+    # Top Performing Causes
+    top_causes = await db.causes.find().sort("total_raised", -1).limit(10).to_list(10)
+    
+    # Top Business Contributors
+    top_businesses = await db.businesses.find().sort("total_impact", -1).limit(10).to_list(10)
+    
+    # Top Customer Contributors
+    top_customers = await db.customers.find().sort("total_contributions", -1).limit(10).to_list(10)
+    
+    # Recent Activity (Last 30 days)
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    recent_registrations = {
+        "businesses": await db.businesses.count_documents({"created_at": {"$gte": thirty_days_ago}}),
+        "customers": await db.customers.count_documents({"created_at": {"$gte": thirty_days_ago}})
+    }
+    recent_causes = await db.causes.count_documents({"created_at": {"$gte": thirty_days_ago}})
+    recent_transactions = await db.transactions.count_documents({"timestamp": {"$gte": thirty_days_ago}})
+    recent_contributions = await db.direct_contributions.count_documents({"timestamp": {"$gte": thirty_days_ago}})
+    
+    # Growth Metrics (comparing last 30 days vs previous 30 days)
+    sixty_days_ago = datetime.utcnow() - timedelta(days=60)
+    previous_period = {
+        "businesses": await db.businesses.count_documents({
+            "created_at": {"$gte": sixty_days_ago, "$lt": thirty_days_ago}
+        }),
+        "customers": await db.customers.count_documents({
+            "created_at": {"$gte": sixty_days_ago, "$lt": thirty_days_ago}
+        }),
+        "causes": await db.causes.count_documents({
+            "created_at": {"$gte": sixty_days_ago, "$lt": thirty_days_ago}
+        }),
+        "transactions": await db.transactions.count_documents({
+            "timestamp": {"$gte": sixty_days_ago, "$lt": thirty_days_ago}
+        }),
+        "contributions": await db.direct_contributions.count_documents({
+            "timestamp": {"$gte": sixty_days_ago, "$lt": thirty_days_ago}
+        })
+    }
+    
+    # Badge Distribution
+    all_badges_businesses = await db.businesses.aggregate([
+        {"$unwind": "$badges"},
+        {"$group": {"_id": "$badges", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]).to_list(50)
+    
+    all_badges_customers = await db.customers.aggregate([
+        {"$unwind": "$badges"},
+        {"$group": {"_id": "$badges", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]).to_list(50)
+    
+    # Social Features Statistics
+    total_shares = await db.cause_shares.count_documents({})
+    total_comments = await db.cause_comments.count_documents({})
+    total_reactions = await db.emoji_reactions.count_documents({})
+    
+    # Platform Health Metrics
+    causes_expiring_soon = await db.causes.count_documents({
+        "end_date": {"$gte": datetime.utcnow(), "$lte": datetime.utcnow() + timedelta(days=7)},
+        "active": True
+    })
+    
+    # Calculate totals and averages safely
+    business_stats = business_financial[0] if business_financial else {
+        "total_sales": 0, "total_impact": 0, "avg_impact": 0
+    }
+    customer_stats = customer_financial[0] if customer_financial else {
+        "total_contributions": 0, "avg_contribution": 0, "total_contribution_count": 0
+    }
+    contribution_stats = contributions_financial[0] if contributions_financial else {
+        "total_amount": 0, "avg_amount": 0, "max_amount": 0, "min_amount": 0
+    }
+    transaction_stats = transaction_financial[0] if transaction_financial else {
+        "total_sales": 0, "total_impact": 0, "avg_sale": 0, "avg_impact": 0
+    }
+    subscription_stats = subscription_revenue[0] if subscription_revenue else {
+        "total_revenue": 0, "avg_revenue": 0
+    }
+    
+    # Total platform revenue
+    total_platform_revenue = (
+        contribution_stats["total_amount"] + 
+        business_stats["total_impact"] + 
+        subscription_stats["total_revenue"]
+    )
+    
+    # Calculate growth rates
+    def calculate_growth_rate(current, previous):
+        if previous == 0:
+            return 100.0 if current > 0 else 0.0
+        return ((current - previous) / previous) * 100
+    
+    growth_rates = {
+        "businesses": calculate_growth_rate(recent_registrations["businesses"], previous_period["businesses"]),
+        "customers": calculate_growth_rate(recent_registrations["customers"], previous_period["customers"]),
+        "causes": calculate_growth_rate(recent_causes, previous_period["causes"]),
+        "transactions": calculate_growth_rate(recent_transactions, previous_period["transactions"]),
+        "contributions": calculate_growth_rate(recent_contributions, previous_period["contributions"])
+    }
+    
+    return {
+        "overview": {
+            "total_users": total_users,
+            "total_businesses": total_businesses,
+            "total_customers": total_customers,
+            "total_admins": total_admins,
+            "total_causes": total_causes,
+            "active_causes": active_causes,
+            "expired_causes": expired_causes,
+            "featured_causes": featured_causes,
+            "total_transactions": total_transactions,
+            "total_contributions": total_contributions,
+            "anonymous_contributions": anonymous_contributions,
+            "registered_contributions": registered_contributions,
+            "total_subscriptions": total_subscriptions,
+            "active_subscriptions": active_subscriptions,
+            "subscription_retention_rate": (active_subscriptions / total_subscriptions * 100) if total_subscriptions > 0 else 0
+        },
+        "financial_metrics": {
+            "total_platform_revenue": total_platform_revenue,
+            "business_impact": business_stats["total_impact"],
+            "customer_contributions": customer_stats["total_contributions"],
+            "subscription_revenue": subscription_stats["total_revenue"],
+            "transaction_volume": transaction_stats["total_sales"],
+            "avg_contribution": contribution_stats["avg_amount"],
+            "avg_transaction": transaction_stats["avg_sale"],
+            "avg_business_impact": business_stats["avg_impact"],
+            "max_single_contribution": contribution_stats["max_amount"],
+            "min_single_contribution": contribution_stats["min_amount"]
+        },
+        "performance_metrics": {
+            "causes_per_business": total_causes / total_businesses if total_businesses > 0 else 0,
+            "contributions_per_customer": customer_stats["total_contribution_count"] / total_customers if total_customers > 0 else 0,
+            "avg_cause_performance": sum(c["total_raised"] for c in top_causes) / len(top_causes) if top_causes else 0,
+            "platform_impact_efficiency": (business_stats["total_impact"] + customer_stats["total_contributions"]) / total_platform_revenue if total_platform_revenue > 0 else 0
+        },
+        "growth_analytics": {
+            "recent_activity": {
+                "new_businesses": recent_registrations["businesses"],
+                "new_customers": recent_registrations["customers"],
+                "new_causes": recent_causes,
+                "recent_transactions": recent_transactions,
+                "recent_contributions": recent_contributions
+            },
+            "growth_rates": growth_rates,
+            "trend_indicators": {
+                "user_growth": "positive" if growth_rates["businesses"] + growth_rates["customers"] > 0 else "negative",
+                "activity_growth": "positive" if growth_rates["transactions"] + growth_rates["contributions"] > 0 else "negative",
+                "cause_creation_growth": "positive" if growth_rates["causes"] > 0 else "negative"
+            }
+        },
+        "category_analysis": [
+            {
+                "category": cat["_id"],
+                "total_causes": cat["count"],
+                "active_causes": cat["active_count"],
+                "total_raised": cat["total_raised"],
+                "avg_performance": cat["avg_raised"],
+                "market_share": (cat["total_raised"] / sum(c["total_raised"] for c in cause_categories)) * 100 if cause_categories else 0
+            } for cat in cause_categories
+        ],
+        "payment_analysis": [
+            {
+                "method": pm["_id"] or "unknown",
+                "usage_count": pm["count"],
+                "total_volume": pm["total_amount"],
+                "avg_amount": pm["avg_amount"],
+                "market_share": (pm["count"] / total_contributions * 100) if total_contributions > 0 else 0
+            } for pm in payment_methods
+        ],
+        "top_performers": {
+            "causes": [
+                {
+                    "id": cause["id"],
+                    "name": cause["name"],
+                    "category": cause["category"],
+                    "total_raised": cause["total_raised"],
+                    "creator_name": cause["creator_name"],
+                    "creator_type": cause["creator_type"]
+                } for cause in top_causes[:5]
+            ],
+            "businesses": [
+                {
+                    "id": business["id"],
+                    "name": business["name"],
+                    "industry": business["industry"],
+                    "total_impact": business["total_impact"],
+                    "total_sales": business["total_sales"],
+                    "transaction_count": business["transaction_count"]
+                } for business in top_businesses[:5]
+            ],
+            "customers": [
+                {
+                    "id": customer["id"],
+                    "name": customer["name"],
+                    "total_contributions": customer["total_contributions"],
+                    "contribution_count": customer["contribution_count"]
+                } for customer in top_customers[:5]
+            ]
+        },
+        "social_engagement": {
+            "total_shares": total_shares,
+            "total_comments": total_comments,
+            "total_reactions": total_reactions,
+            "engagement_rate": ((total_shares + total_comments + total_reactions) / total_causes) if total_causes > 0 else 0
+        },
+        "badge_distribution": {
+            "business_badges": all_badges_businesses[:10],
+            "customer_badges": all_badges_customers[:10],
+            "total_badges_awarded": sum(b["count"] for b in all_badges_businesses) + sum(b["count"] for b in all_badges_customers)
+        },
+        "platform_health": {
+            "causes_expiring_soon": causes_expiring_soon,
+            "subscription_churn_rate": (cancelled_subscriptions / total_subscriptions * 100) if total_subscriptions > 0 else 0,
+            "cause_completion_rate": (expired_causes / total_causes * 100) if total_causes > 0 else 0,
+            "user_engagement_score": ((recent_transactions + recent_contributions) / (recent_registrations["businesses"] + recent_registrations["customers"])) if (recent_registrations["businesses"] + recent_registrations["customers"]) > 0 else 0
+        }
+    }
     # Get all causes
     causes = await db.causes.find({}).to_list(1000)
     settlements = []
