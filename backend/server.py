@@ -157,6 +157,8 @@ class Cause(BaseModel):
     featured: bool = False
     payment_methods_accepted: List[str] = Field(default_factory=lambda: ["card", "momo", "papss", "bank_transfer"])
     volunteer_opportunities: List[str] = Field(default_factory=list)
+    cause_code: str = Field(default_factory=generate_cause_code)  # Unique code for USSD
+    ussd_shortcode: str = ""  # Will be generated based on cause_code
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class CauseCreate(BaseModel):
