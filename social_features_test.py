@@ -217,7 +217,10 @@ def test_create_cause_comment():
     customer_comment = response.json()
     assert customer_comment["user_id"] == customer_id, f"Expected user_id {customer_id}, got {customer_comment['user_id']}"
     assert customer_comment["comment"] == customer_comment_data["comment"], f"Comment text doesn't match"
-    assert customer_comment["is_admin_response"] == False, "Customer comment should not be marked as admin response"
+    
+    # Check if this is an admin response (if customer is the cause creator)
+    is_admin_response = (demo_data["cause"]["creator_id"] == customer_id and demo_data["cause"]["creator_type"] == "customer")
+    assert customer_comment["is_admin_response"] == is_admin_response, f"Customer comment admin response flag incorrect. Expected {is_admin_response}, got {customer_comment['is_admin_response']}"
     
     # Store comment ID for reply test
     customer_comment_id = customer_comment["id"]
