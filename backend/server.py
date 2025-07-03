@@ -2060,8 +2060,7 @@ async def get_demo_users():
 
 # Enhanced Admin Settlement Endpoints
 @api_router.get("/admin/settlements")
-async def get_cause_settlements():
-    """Get settlement information for all causes with donation tracking"""
+async def get_admin_settlements():
     # Get all causes
     causes = await db.causes.find({}).to_list(1000)
     settlements = []
