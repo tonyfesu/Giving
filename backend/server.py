@@ -1378,7 +1378,7 @@ async def get_supported_payment_methods():
 async def get_api_documentation():
     """Get API documentation for developers"""
     return {
-        "title": "ImpactLink Developer API",
+        "title": "Nnoboa Developer API",
         "version": "4.0",
         "description": "Complete API for integrating social impact into your applications",
         "base_url": "https://api.impactlink.com",
