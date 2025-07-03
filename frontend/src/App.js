@@ -1447,12 +1447,6 @@ function AppContent() {
                   Dashboard
                 </button>
               )}
-              <button
-                onClick={() => setCurrentView("admin")}
-                className={`font-medium transition-colors ${currentView === "admin" ? "text-blue-600" : "text-gray-600 hover:text-blue-600"}`}
-              >
-                Admin
-              </button>
               
               {/* User Status */}
               {currentUser && (
