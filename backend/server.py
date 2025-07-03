@@ -1628,6 +1628,193 @@ async def get_demo_users():
         }
     }
 
+# Enhanced Admin Settlement Endpoints
+@api_router.get("/admin/settlements")
+async def get_cause_settlements():
+    """Get settlement information for all causes with donation tracking"""
+    # Get all causes
+    causes = await db.causes.find({}).to_list(1000)
+    settlements = []
+    
+    for cause in causes:
+        try:
+            # Ensure required fields exist
+            if "creator_id" not in cause:
+                cause["creator_id"] = "unknown"
+            if "creator_type" not in cause:
+                cause["creator_type"] = "unknown"
+            if "creator_name" not in cause:
+                cause["creator_name"] = "Unknown Creator"
+            if "creator_website" not in cause:
+                cause["creator_website"] = None
+                
+            cause_obj = Cause(**cause)
+            
+            # Calculate donations received from direct contributions
+            contributions = await db.direct_contributions.find({"cause_id": cause["id"]}).to_list(1000)
+            direct_donations = sum([c.get("amount", 0) for c in contributions])
+            
+            # Calculate donations from business transactions
+            transactions = await db.transactions.find({}).to_list(1000)
+            business_donations = 0
+            for txn in transactions:
+                if "impact_breakdown" in txn:
+                    for cause_id, amount in txn["impact_breakdown"].items():
+                        if cause_id == cause["id"]:
+                            try:
+                                business_donations += float(amount)
+                            except (ValueError, TypeError):
+                                continue
+            
+            total_donations = direct_donations + business_donations
+            
+            # Get existing settlement record or create new
+            settlement = await db.cause_settlements.find_one({"cause_id": cause["id"]})
+            if not settlement:
+                settlement = {
+                    "id": str(uuid.uuid4()),
+                    "cause_id": cause["id"],
+                    "total_donations_received": total_donations,
+                    "last_settlement_date": None,
+                    "pending_amount": total_donations,
+                    "total_settled": 0.0,
+                    "settlement_account_info": cause.get("settlement_info"),
+                    "created_at": datetime.utcnow()
+                }
+                await db.cause_settlements.insert_one(settlement)
+            else:
+                # Update total donations
+                settlement["total_donations_received"] = total_donations
+                settlement["pending_amount"] = total_donations - settlement.get("total_settled", 0)
+                await db.cause_settlements.update_one(
+                    {"cause_id": cause["id"]},
+                    {"$set": {
+                        "total_donations_received": total_donations,
+                        "pending_amount": settlement["pending_amount"]
+                    }}
+                )
+            
+            settlements.append({
+                "cause": cause_obj,
+                "settlement": CauseSettlement(**settlement),
+                "direct_donations": direct_donations,
+                "business_donations": business_donations,
+                "total_donations": total_donations
+            })
+        except Exception as e:
+            print(f"Error processing settlement for cause {cause.get('id', 'unknown')}: {e}")
+            continue
+    
+    return {"settlements": settlements}
+
+@api_router.post("/admin/settlements/{cause_id}/initiate-payment")
+async def initiate_settlement_payment(cause_id: str, payment_data: dict):
+    """Initiate payment to cause organization"""
+    # Get cause settlement info
+    settlement = await db.cause_settlements.find_one({"cause_id": cause_id})
+    if not settlement:
+        raise HTTPException(status_code=404, detail="Settlement record not found")
+    
+    if settlement["pending_amount"] <= 0:
+        raise HTTPException(status_code=400, detail="No pending amount to settle")
+    
+    # Create settlement payment record
+    settlement_payment = {
+        "id": str(uuid.uuid4()),
+        "cause_id": cause_id,
+        "settlement_id": settlement["id"],
+        "amount": settlement["pending_amount"],
+        "payment_method": payment_data.get("payment_method", {"type": "bank_transfer", "provider": "bank"}),
+        "status": "initiated",
+        "initiated_by": payment_data.get("admin_id", "admin"),
+        "payment_reference": f"SETTLE_{uuid.uuid4().hex[:8]}",
+        "created_at": datetime.utcnow(),
+        "completed_at": None
+    }
+    
+    await db.settlement_payments.insert_one(settlement_payment)
+    
+    # Update settlement record
+    await db.cause_settlements.update_one(
+        {"cause_id": cause_id},
+        {"$set": {
+            "last_settlement_date": datetime.utcnow(),
+            "total_settled": settlement["total_settled"] + settlement["pending_amount"],
+            "pending_amount": 0.0
+        }}
+    )
+    
+    # Simulate payment processing (in real implementation, integrate with payment gateway)
+    import asyncio
+    await asyncio.sleep(0.1)  # Simulate processing time
+    
+    # Update payment status to completed
+    await db.settlement_payments.update_one(
+        {"id": settlement_payment["id"]},
+        {"$set": {
+            "status": "completed",
+            "completed_at": datetime.utcnow()
+        }}
+    )
+    
+    return {
+        "message": "Settlement payment initiated successfully",
+        "payment_reference": settlement_payment["payment_reference"],
+        "amount": settlement_payment["amount"],
+        "status": "completed"
+    }
+
+# User Cause Creation Endpoints
+@api_router.post("/users/{user_id}/causes", response_model=Cause)
+async def create_user_cause(user_id: str, cause_data: UserCauseCreate, user_type: str):
+    """Allow users to create their own causes"""
+    
+    # Validate user exists
+    if user_type == "business":
+        user = await db.businesses.find_one({"id": user_id})
+        creator_name = user["name"] if user else "Unknown Business"
+        creator_website = user.get("website") if user else None
+    elif user_type == "customer":
+        user = await db.customers.find_one({"id": user_id})
+        creator_name = user["name"] if user else "Unknown Customer"
+        creator_website = None
+    else:
+        raise HTTPException(status_code=400, detail="Invalid user type")
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Create cause object
+    cause = {
+        "id": str(uuid.uuid4()),
+        "name": cause_data.name,
+        "description": cause_data.description,
+        "category": cause_data.category,
+        "image_url": cause_data.image_url or f"https://images.unsplash.com/photo-{random.randint(1400000000, 1600000000)}",
+        "impact_metric": cause_data.impact_metric,
+        "cost_per_impact": cause_data.cost_per_impact,
+        "total_raised": 0.0,
+        "total_impact_units": 0.0,
+        "goal_amount": cause_data.goal_amount,
+        "start_date": datetime.utcnow(),
+        "end_date": cause_data.end_date,
+        "creator_id": user_id,
+        "creator_type": user_type,
+        "creator_name": creator_name,
+        "creator_website": creator_website,
+        "active": True,
+        "expired": False,
+        "featured": False,
+        "payment_methods_accepted": cause_data.payment_methods_accepted,
+        "volunteer_opportunities": cause_data.volunteer_opportunities,
+        "settlement_info": cause_data.settlement_info.dict(),
+        "created_at": datetime.utcnow()
+    }
+    
+    await db.causes.insert_one(cause)
+    
+    return Cause(**cause)
+
 # Enhanced dashboard endpoints
 @api_router.get("/impact/dashboard/{business_id}")
 async def get_impact_dashboard(business_id: str):
