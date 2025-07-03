@@ -569,13 +569,20 @@ def test_reaction_counting_workflow():
     
     # Add reactions from multiple users
     reactions = [
-        {"emoji": "❤️", "user_id": business_id, "user_type": "business"},
-        {"emoji": "❤️", "user_id": customer_id, "user_type": "customer"},
-        {"emoji": "👍", "user_id": new_customer_id, "user_type": "customer"}
+        {"user_id": business_id, "user_type": "business", "emoji": "❤️"},
+        {"user_id": customer_id, "user_type": "customer", "emoji": "❤️"},
+        {"user_id": new_customer_id, "user_type": "customer", "emoji": "👍"}
     ]
     
     for reaction in reactions:
-        response = requests.post(f"{API_URL}/causes/{cause_id}/reactions", json=reaction)
+        user_id = reaction["user_id"]
+        user_type = reaction["user_type"]
+        emoji_data = {"emoji": reaction["emoji"]}
+        
+        response = requests.post(
+            f"{API_URL}/causes/{cause_id}/reactions?user_id={user_id}&user_type={user_type}", 
+            json=emoji_data
+        )
         assert response.status_code == 200, f"Expected status code 200 for reaction, got {response.status_code}"
     
     # Verify reaction counts
@@ -592,12 +599,13 @@ def test_reaction_counting_workflow():
     
     # Update a reaction
     updated_reaction = {
-        "emoji": "🎉",
-        "user_id": customer_id,
-        "user_type": "customer"
+        "emoji": "🎉"
     }
     
-    response = requests.post(f"{API_URL}/causes/{cause_id}/reactions", json=updated_reaction)
+    response = requests.post(
+        f"{API_URL}/causes/{cause_id}/reactions?user_id={customer_id}&user_type=customer", 
+        json=updated_reaction
+    )
     assert response.status_code == 200, f"Expected status code 200 for updated reaction, got {response.status_code}"
     
     # Verify updated reaction counts
