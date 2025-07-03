@@ -2078,10 +2078,12 @@ async def track_cause_share(cause_id: str, share_data: dict):
     if not cause:
         raise HTTPException(status_code=404, detail="Cause not found")
     
+    share_url = f"{BACKEND_URL}/causes/{cause_id}"
+    
     share_record = {
         "id": str(uuid.uuid4()),
         "cause_id": cause_id,
-        "share_url": f"{BACKEND_URL}/causes/{cause_id}",
+        "share_url": share_url,
         "shared_by": share_data.get("user_id"),
         "platform": share_data.get("platform", "link"),
         "created_at": datetime.utcnow()
@@ -2089,7 +2091,18 @@ async def track_cause_share(cause_id: str, share_data: dict):
     
     await db.cause_shares.insert_one(share_record)
     
-    return {"message": "Share tracked successfully"}
+    return {
+        "message": "Share tracked successfully",
+        "share_record": share_record,
+        "share_url": share_url,
+        "social_links": {
+            "facebook": f"https://www.facebook.com/sharer/sharer.php?u={share_url}",
+            "twitter": f"https://twitter.com/intent/tweet?url={share_url}&text=Check out this amazing cause: {cause['name']}",
+            "linkedin": f"https://www.linkedin.com/sharing/share-offsite/?url={share_url}",
+            "whatsapp": f"https://wa.me/?text=Check out this amazing cause: {cause['name']} {share_url}",
+            "email": f"mailto:?subject=Check out this cause&body=I thought you might be interested in this cause: {cause['name']} - {share_url}"
+        }
+    }
 
 @api_router.get("/causes/{cause_id}/comments")
 async def get_cause_comments(cause_id: str):
