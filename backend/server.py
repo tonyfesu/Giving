@@ -2222,13 +2222,16 @@ async def get_cause_reactions(cause_id: str):
     }
 
 @api_router.post("/causes/{cause_id}/reactions")
-async def add_cause_reaction(cause_id: str, reaction_data: EmojiReactionCreate, user_id: str, user_type: str):
+async def add_cause_reaction(cause_id: str, reaction_data: EmojiReactionCreate):
     """Add emoji reaction to a cause"""
     cause = await db.causes.find_one({"id": cause_id})
     if not cause:
         raise HTTPException(status_code=404, detail="Cause not found")
     
-    # Get user information
+    # Get user information from reaction data
+    user_id = reaction_data.user_id
+    user_type = reaction_data.user_type
+    
     if user_type == "business":
         user = await db.businesses.find_one({"id": user_id})
         user_name = user["name"] if user else "Unknown Business"
