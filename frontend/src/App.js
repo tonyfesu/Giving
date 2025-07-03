@@ -3158,7 +3158,7 @@ function AppContent() {
           
           <div className="border-t border-gray-700 pt-8 mt-8 text-center">
             <p className="text-gray-500 text-sm">
-              © 2025 ImpactLink. All rights reserved. Complete social impact management platform.
+              © 2025 Nnoboa. All rights reserved. Complete social impact management platform.
             </p>
           </div>
         </div>
