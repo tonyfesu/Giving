@@ -1785,20 +1785,27 @@ const RegistrationForm = ({ onRegistrationComplete }) => {
       if (registrationType === "business") {
         // Register business
         const businessData = {
-          name: formData.business_name,
+          name: formData.name,  // Contact person name
+          business_name: formData.business_name,  // Business name
           industry: formData.industry,
           website: formData.website,
-          contact_email: formData.email,
-          contact_phone: formData.phone,
-          address: formData.business_address,
-          city: formData.business_city,
-          state: formData.business_state,
-          country: formData.business_country,
-          postal_code: formData.business_postal_code,
+          email: formData.email,  // Contact email
+          phone: formData.phone,  // Contact phone
+          address: formData.address,  // Contact address
+          city: formData.city,
+          state: formData.state,
+          country: formData.country,
+          postal_code: formData.postal_code,
+          business_address: formData.business_address,
+          business_city: formData.business_city,
+          business_state: formData.business_state,
+          business_country: formData.business_country,
+          business_postal_code: formData.business_postal_code,
           business_type: formData.business_type,
           company_size: formData.company_size,
           tax_id: formData.tax_id,
           description: formData.bio,
+          bio: formData.bio,
           settlement_info: {
             type: formData.settlement_type,
             bank_name: formData.bank_name,
