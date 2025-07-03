@@ -160,6 +160,13 @@ const CauseBrowser = () => {
   const [newComment, setNewComment] = useState("");
   const [replyTo, setReplyTo] = useState(null);
   
+  // Social features state
+  const [showComments, setShowComments] = useState({});
+  const [comments, setComments] = useState({});
+  const [reactions, setReactions] = useState({});
+  const [newComment, setNewComment] = useState("");
+  const [replyTo, setReplyTo] = useState(null);
+  
   const { currentUser, userType } = useUser();
 
   useEffect(() => {
