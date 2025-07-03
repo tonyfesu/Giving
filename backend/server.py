@@ -833,6 +833,10 @@ async def create_cause(cause: CauseCreate):
         cause_dict["creator_website"] = creator["website"]
     
     cause_obj = Cause(**cause_dict)
+    
+    # Generate USSD shortcode
+    cause_obj.ussd_shortcode = f"*123*86*{cause_obj.cause_code}*[Amount]#"
+    
     await db.causes.insert_one(cause_obj.dict())
     
     # Award cause creator badge
