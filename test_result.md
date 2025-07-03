@@ -607,7 +607,45 @@ test_plan:
   test_all: true
   test_priority: "high_first"
 
+  - task: "Create Cause button in causes section"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Starting implementation of Create Cause button in causes section to allow users to create new causes directly from the causes page"
+
+  - task: "Enhanced payment flow after subscription selection"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Need to modify subscription flow to redirect to payment page after subscription selection, before allowing user login/platform access"
+
+  - task: "Admin dashboard with performance metrics"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Creating new admin dashboard with comprehensive performance metrics including total causes, donations, registrations, revenue analytics, etc."
+
 agent_communication:
+  - agent: "main"
+    message: "USER REQUESTED NEW FEATURES: Starting implementation of three new features: 1) Create Cause button in causes section, 2) Enhanced payment flow after subscription (before login), 3) Admin dashboard with performance metrics. Beginning with backend and frontend implementation."
   - agent: "main"
     message: "Completed comprehensive Nnoboa platform with ALL requested features: customer contributions (GoFundMe-style), leaderboards, badge system, admin dashboard, and external API integration. Platform now supports businesses, customers, and administrators with full social impact tracking, gamification, and management capabilities."
   - agent: "testing"
