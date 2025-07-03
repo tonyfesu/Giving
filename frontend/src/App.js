@@ -2640,10 +2640,17 @@ const PostRegistrationSubscription = ({ userData, userType, onSubscriptionComple
   
   const handlePlanSelect = (plan) => {
     setSelectedPlan(plan);
+    // Instead of showing payment inline, redirect to payment view
     if (plan.price > 0) {
-      setShowPayment(true);
+      // Pass plan to payment view
+      onSubscriptionComplete({
+        userData,
+        userType,
+        selectedPlan: plan,
+        requiresPayment: true
+      });
     } else {
-      // Free plan - process immediately
+      // Free plan - complete immediately
       handleSubscriptionComplete(plan);
     }
   };
