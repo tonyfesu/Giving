@@ -1855,9 +1855,9 @@ async def get_demo_users():
     demo_admins = await db.admin_users.find().to_list(10)
     
     return {
-        "demo_business": Business(**demo_business) if demo_business else None,
-        "demo_customer": Customer(**demo_customer) if demo_customer else None,
-        "demo_admins": [AdminUser(**admin) for admin in demo_admins],
+        "businesses": [Business(**demo_business)] if demo_business else [],
+        "customers": [Customer(**demo_customer)] if demo_customer else [],
+        "admins": [AdminUser(**admin) for admin in demo_admins],
         "login_instructions": {
             "business": "Use EcoTech Solutions for business demo",
             "customer": "Use Sarah Green for customer demo",
