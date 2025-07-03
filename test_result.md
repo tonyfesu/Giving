@@ -306,7 +306,7 @@ backend:
 
   - task: "Comments System"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 2
     priority: "high"
@@ -321,6 +321,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "Comments system still has issues. GET /api/causes/{cause_id}/comments works correctly, but POST /api/causes/{cause_id}/comments returns a 404 Not Found error even when user_id and user_type are included in the request body."
+      - working: true
+        agent: "testing"
+        comment: "Comments system now works correctly. GET /api/causes/{cause_id}/comments returns comments and replies in a properly threaded structure. POST /api/causes/{cause_id}/comments now accepts user_id and user_type in the request body and successfully creates comments and replies. Admin response functionality works correctly, with cause creators' comments flagged as admin responses."
 
   - task: "Emoji Reactions"
     implemented: true
