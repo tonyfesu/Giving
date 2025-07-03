@@ -733,6 +733,9 @@ async def init_default_data():
         ]
         
         for cause in default_causes:
+            # Add USSD shortcode fields to existing causes
+            cause["cause_code"] = generate_cause_code()
+            cause["ussd_shortcode"] = f"*123*86*{cause['cause_code']}*[Amount]#"
             await db.causes.insert_one(cause)
 
     # Create default admin users
