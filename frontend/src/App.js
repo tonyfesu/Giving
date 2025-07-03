@@ -2920,6 +2920,37 @@ function AppContent() {
         return <CustomerRegistration onCustomerCreate={handleCustomerCreate} />;
       case "business-setup":
         return <BusinessSetup onBusinessCreate={handleBusinessCreate} />;
+      case "home":
+        return (
+          <>
+            <HeroSection />
+            <FeaturesSection />
+            <CauseBrowser />
+            <LeaderboardSection />
+            <div className="py-20 bg-white text-center">
+              <div className="max-w-4xl mx-auto px-4">
+                <h2 className="text-4xl font-bold text-gray-800 mb-6">Ready to Make an Impact?</h2>
+                <p className="text-xl text-gray-600 mb-8">
+                  Join the movement with complete cause management, subscriptions, and settlement tracking.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button
+                    onClick={() => setCurrentView("demo")}
+                    className="bg-gradient-to-r from-green-500 to-teal-600 text-white px-12 py-4 rounded-full font-semibold text-xl hover:from-green-600 hover:to-teal-700 transform hover:scale-105 transition-all shadow-xl"
+                  >
+                    Try Demo Platform
+                  </button>
+                  <button
+                    onClick={() => setCurrentView("business-setup")}
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-12 py-4 rounded-full font-semibold text-xl hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all shadow-xl"
+                  >
+                    Register Business
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        );
       case "dashboard":
         return business ? (
           <BusinessDashboard business={business} />
