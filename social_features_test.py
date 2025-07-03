@@ -566,9 +566,9 @@ def test_reaction_counting_workflow():
     business_id = demo_data["business"]["id"]
     customer_id = demo_data["customer"]["id"]
     
-    requests.delete(f"{API_URL}/causes/{cause_id}/reactions?user_id={business_id}")
-    requests.delete(f"{API_URL}/causes/{cause_id}/reactions?user_id={customer_id}")
-    requests.delete(f"{API_URL}/causes/{cause_id}/reactions?user_id={new_customer_id}")
+    requests.delete(f"{API_URL}/causes/{cause_id}/reactions", json={"user_id": business_id})
+    requests.delete(f"{API_URL}/causes/{cause_id}/reactions", json={"user_id": customer_id})
+    requests.delete(f"{API_URL}/causes/{cause_id}/reactions", json={"user_id": new_customer_id})
     
     # Add reactions from multiple users
     reactions = [
@@ -578,14 +578,7 @@ def test_reaction_counting_workflow():
     ]
     
     for reaction in reactions:
-        user_id = reaction["user_id"]
-        user_type = reaction["user_type"]
-        emoji_data = {"emoji": reaction["emoji"]}
-        
-        response = requests.post(
-            f"{API_URL}/causes/{cause_id}/reactions?user_id={user_id}&user_type={user_type}", 
-            json=emoji_data
-        )
+        response = requests.post(f"{API_URL}/causes/{cause_id}/reactions", json=reaction)
         assert response.status_code == 200, f"Expected status code 200 for reaction, got {response.status_code}"
     
     # Verify reaction counts
@@ -593,7 +586,7 @@ def test_reaction_counting_workflow():
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
     
     reactions_data = response.json()
-    reaction_counts = reactions_data["reaction_counts"]
+    reaction_counts = reactions_data["reactions"]
     
     assert "❤️" in reaction_counts, "Emoji ❤️ not found in reaction counts"
     assert "👍" in reaction_counts, "Emoji 👍 not found in reaction counts"
@@ -602,13 +595,12 @@ def test_reaction_counting_workflow():
     
     # Update a reaction
     updated_reaction = {
-        "emoji": "🎉"
+        "emoji": "🎉",
+        "user_id": customer_id,
+        "user_type": "customer"
     }
     
-    response = requests.post(
-        f"{API_URL}/causes/{cause_id}/reactions?user_id={customer_id}&user_type=customer", 
-        json=updated_reaction
-    )
+    response = requests.post(f"{API_URL}/causes/{cause_id}/reactions", json=updated_reaction)
     assert response.status_code == 200, f"Expected status code 200 for updated reaction, got {response.status_code}"
     
     # Verify updated reaction counts
@@ -616,7 +608,7 @@ def test_reaction_counting_workflow():
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
     
     reactions_data = response.json()
-    reaction_counts = reactions_data["reaction_counts"]
+    reaction_counts = reactions_data["reactions"]
     
     assert "❤️" in reaction_counts, "Emoji ❤️ not found in reaction counts"
     assert "👍" in reaction_counts, "Emoji 👍 not found in reaction counts"
@@ -626,7 +618,7 @@ def test_reaction_counting_workflow():
     assert reaction_counts["🎉"] == 1, f"Expected 1 🎉 reaction, got {reaction_counts['🎉']}"
     
     # Remove a reaction
-    response = requests.delete(f"{API_URL}/causes/{cause_id}/reactions?user_id={new_customer_id}")
+    response = requests.delete(f"{API_URL}/causes/{cause_id}/reactions", json={"user_id": new_customer_id})
     assert response.status_code == 200, f"Expected status code 200 for delete reaction, got {response.status_code}"
     
     # Verify final reaction counts
@@ -634,7 +626,7 @@ def test_reaction_counting_workflow():
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
     
     reactions_data = response.json()
-    reaction_counts = reactions_data["reaction_counts"]
+    reaction_counts = reactions_data["reactions"]
     
     assert "❤️" in reaction_counts, "Emoji ❤️ not found in reaction counts"
     assert "🎉" in reaction_counts, "Emoji 🎉 not found in reaction counts"
