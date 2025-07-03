@@ -2688,12 +2688,6 @@ function AppContent() {
                   >
                     Subscription
                   </button>
-                  <button
-                    onClick={() => setCurrentView("settlement")}
-                    className={`font-medium transition-colors ${currentView === "settlement" ? "text-blue-600" : "text-gray-600 hover:text-blue-600"}`}
-                  >
-                    Settlement
-                  </button>
                 </>
               )}
               
