@@ -669,15 +669,18 @@ test_plan:
 
   - task: "Create Cause Endpoint"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
         comment: "Create Cause endpoint has issues. POST /api/users/{user_id}/causes works for creating causes with all required fields, but the USSD shortcode generation is not working correctly. The shortcode should start with '*123*86*' but it doesn't match this pattern. Both business and customer creator types can create causes, but the shortcode issue needs to be fixed."
+      - working: true
+        agent: "testing"
+        comment: "Create Cause endpoint is now working correctly. The USSD shortcode generation has been fixed by explicitly adding the cause_code and ussd_shortcode fields to the cause object. The shortcode now follows the exact format '*123*86*[CAUSE_CODE]*[Amount]#' as required. Both business and customer creator types can create causes successfully, and all cause fields are properly saved."
 
   - task: "Payment Processing Endpoint"
     implemented: true
