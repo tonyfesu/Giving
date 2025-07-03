@@ -1149,57 +1149,6 @@ async def create_subscription(subscription_data: dict):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Subscription creation failed: {str(e)}")
-    if user_type not in ["customer", "business"]:
-        raise HTTPException(status_code=400, detail="Invalid user type")
-    
-    # Get user
-    collection = db.customers if user_type == "customer" else db.businesses
-    user = await collection.find_one({"id": user_id})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Check if user already has an active subscription
-    if user.get("subscription") and user["subscription"]["status"] == "active":
-        raise HTTPException(status_code=400, detail="User already has an active subscription")
-    
-    # Get plan details
-    plan_category = "individual" if user_type == "customer" else "business"
-    if subscription_data.plan_type not in SUBSCRIPTION_PLANS[plan_category]:
-        raise HTTPException(status_code=400, detail="Invalid plan type")
-    
-    plan_details = SUBSCRIPTION_PLANS[plan_category][subscription_data.plan_type]
-    
-    # Calculate end date based on plan type
-    if subscription_data.plan_type == "monthly":
-        end_date = datetime.utcnow() + timedelta(days=30)
-    elif subscription_data.plan_type == "yearly":
-        end_date = datetime.utcnow() + timedelta(days=365)
-    elif subscription_data.plan_type == "premium":
-        end_date = datetime.utcnow() + timedelta(days=365)
-    
-    # Create subscription
-    subscription_obj = Subscription(
-        user_id=user_id,
-        user_type=user_type,
-        plan_type=subscription_data.plan_type,
-        amount=plan_details["price"],
-        end_date=end_date,
-        auto_renew=subscription_data.auto_renew
-    )
-    
-    await db.subscriptions.insert_one(subscription_obj.dict())
-    
-    # Update user with subscription
-    await collection.update_one(
-        {"id": user_id},
-        {"$set": {"subscription": subscription_obj.dict()}}
-    )
-    
-    # Award subscriber badge
-    await check_and_award_badges(user_type, user_id, user)
-    
-    return subscription_obj
-
 @api_router.get("/subscriptions/{user_id}")
 async def get_user_subscription(user_id: str, user_type: str):
     collection = db.customers if user_type == "customer" else db.businesses
