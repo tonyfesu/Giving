@@ -309,26 +309,7 @@ const CauseBrowser = () => {
     }
   };
 
-  useEffect(() => {
-    fetchCauses();
-  }, [filters]);
 
-  const fetchCauses = async () => {
-    try {
-      const params = new URLSearchParams();
-      if (filters.category) params.append('category', filters.category);
-      if (filters.expired !== null) params.append('expired', filters.expired);
-      params.append('sort_by', filters.sort_by);
-      params.append('sort_order', filters.sort_order);
-      params.append('active_only', 'false'); // Show all causes including expired
-
-      const response = await axios.get(`${API}/causes?${params}`);
-      setCauses(response.data);
-      setFilteredCauses(response.data);
-    } catch (error) {
-      console.error("Error fetching causes:", error);
-    }
-  };
 
   const handleDonate = async () => {
     if (!paymentMethod) {
