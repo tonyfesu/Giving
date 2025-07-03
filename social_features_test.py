@@ -494,14 +494,12 @@ def test_admin_response_workflow():
     customer_id = demo_data["customer"]["id"]
     customer_comment_data = {
         "comment": "I have a question about this cause. How exactly are the funds used?",
-        "parent_comment_id": None
+        "parent_comment_id": None,
+        "user_id": customer_id,
+        "user_type": "customer"
     }
     
-    # Send user_id and user_type as query parameters
-    response = requests.post(
-        f"{API_URL}/causes/{cause_id}/comments?user_id={customer_id}&user_type=customer", 
-        json=customer_comment_data
-    )
+    response = requests.post(f"{API_URL}/causes/{cause_id}/comments", json=customer_comment_data)
     assert response.status_code == 200, f"Expected status code 200 for customer comment, got {response.status_code}"
     
     customer_comment = response.json()
@@ -510,14 +508,12 @@ def test_admin_response_workflow():
     # 2. Business (cause creator) responds to the comment
     business_reply_data = {
         "comment": "Thank you for your question! 100% of funds go directly to planting trees in affected areas.",
-        "parent_comment_id": customer_comment["id"]
+        "parent_comment_id": customer_comment["id"],
+        "user_id": business_id,
+        "user_type": "business"
     }
     
-    # Send user_id and user_type as query parameters
-    response = requests.post(
-        f"{API_URL}/causes/{cause_id}/comments?user_id={business_id}&user_type=business", 
-        json=business_reply_data
-    )
+    response = requests.post(f"{API_URL}/causes/{cause_id}/comments", json=business_reply_data)
     assert response.status_code == 200, f"Expected status code 200 for business reply, got {response.status_code}"
     
     business_reply = response.json()
