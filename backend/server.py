@@ -2131,6 +2131,7 @@ async def get_cause_comments(cause_id: str):
         if comment_obj.parent_comment_id is None:
             # Top-level comment
             organized_comments.append({
+                "id": comment_obj.id,  # Add ID at the top level for easier access
                 "comment": comment_obj,
                 "replies": []
             })
