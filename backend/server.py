@@ -1511,9 +1511,9 @@ async def get_sdk_information():
         },
         "plugins": {
             "shopify": {
-                "name": "ImpactLink for Shopify",
-                "description": "Add social impact to your Shopify store",
-                "install_url": "https://apps.shopify.com/impactlink"
+                "name": "Nnoboa for Shopify",
+                "description": "Shopify app for social impact integration",
+                "install_url": "https://apps.shopify.com/nnoboa"
             },
             "woocommerce": {
                 "name": "ImpactLink for WooCommerce",
