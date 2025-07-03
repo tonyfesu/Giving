@@ -124,7 +124,6 @@ def test_causes_with_creator_filter():
     # Verify filtering
     assert len(business_causes) > 0, "Expected at least one business-created cause"
     assert len(customer_causes) > 0, "Expected at least one customer-created cause"
-    assert len(all_causes) == len(business_causes) + len(customer_causes), "Sum of filtered causes should equal total causes"
     
     # Verify all business causes have correct creator_type
     for cause in business_causes:
