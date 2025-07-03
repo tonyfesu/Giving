@@ -4039,6 +4039,7 @@ function AppContent() {
   const [currentView, setCurrentView] = useState("demo");
   const [business, setBusiness] = useState(null);
   const [recentTransaction, setRecentTransaction] = useState(null);
+  const [registrationData, setRegistrationData] = useState(null);
   const { currentUser, setCurrentUser, userType, setUserType } = useUser();
 
   const handleUserSelect = (user, type) => {
@@ -4047,6 +4048,21 @@ function AppContent() {
     if (type === "business") {
       setBusiness(user);
     }
+    setCurrentView("home");
+  };
+
+  const handleRegistrationComplete = (data) => {
+    setRegistrationData(data);
+    setCurrentView("subscription-selection");
+  };
+
+  const handleSubscriptionComplete = (data) => {
+    setCurrentUser(data.userData);
+    setUserType(data.userType);
+    if (data.userType === "business") {
+      setBusiness(data.userData);
+    }
+    setRegistrationData(null);
     setCurrentView("home");
   };
 
