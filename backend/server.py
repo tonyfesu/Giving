@@ -1530,8 +1530,8 @@ async def get_code_examples():
         "javascript": {
             "install": "npm install @nnoboa/js-sdk",
             "setup": """
-const ImpactLink = require('@impactlink/js-sdk');
-const client = new ImpactLink({
+const Nnoboa = require('@nnoboa/js-sdk');
+const client = new Nnoboa({
     apiKey: 'your_api_key_here',
     sandbox: true // Use sandbox for testing
 });
