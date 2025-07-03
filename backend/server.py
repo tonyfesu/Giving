@@ -25,7 +25,7 @@ db = client[os.environ['DB_NAME']]
 BACKEND_URL = os.environ.get('BACKEND_URL', 'http://localhost:8000')
 
 # Create the main app without a prefix
-app = FastAPI(title="ImpactLink API", description="Social Impact Platform API", version="4.0")
+app = FastAPI(title="Nnoboa API", description="Social Impact Platform API", version="4.0")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
