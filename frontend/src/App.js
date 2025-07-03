@@ -135,6 +135,375 @@ const DemoUserSelector = ({ onUserSelect }) => {
   );
 };
 
+// Create Cause Modal Component
+const CreateCauseModal = ({ onClose, onCauseCreated, currentUser, userType }) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    category: "Education",
+    impact_metric: "",
+    cost_per_impact: "",
+    goal_amount: "",
+    end_date: "",
+    image_url: "",
+    payment_methods_accepted: ["card", "momo", "bank_transfer"],
+    volunteer_opportunities: []
+  });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [newVolunteerOpp, setNewVolunteerOpp] = useState("");
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ""
+      }));
+    }
+  };
+
+  const handlePaymentMethodChange = (method) => {
+    setFormData(prev => ({
+      ...prev,
+      payment_methods_accepted: prev.payment_methods_accepted.includes(method)
+        ? prev.payment_methods_accepted.filter(m => m !== method)
+        : [...prev.payment_methods_accepted, method]
+    }));
+  };
+
+  const addVolunteerOpportunity = () => {
+    if (newVolunteerOpp.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        volunteer_opportunities: [...prev.volunteer_opportunities, newVolunteerOpp.trim()]
+      }));
+      setNewVolunteerOpp("");
+    }
+  };
+
+  const removeVolunteerOpportunity = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      volunteer_opportunities: prev.volunteer_opportunities.filter((_, i) => i !== index)
+    }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.name.trim()) newErrors.name = "Cause name is required";
+    if (!formData.description.trim()) newErrors.description = "Description is required";
+    if (!formData.impact_metric.trim()) newErrors.impact_metric = "Impact metric is required";
+    if (!formData.cost_per_impact) newErrors.cost_per_impact = "Cost per impact is required";
+    if (!formData.goal_amount) newErrors.goal_amount = "Goal amount is required";
+    if (!formData.end_date) newErrors.end_date = "End date is required";
+    
+    if (parseFloat(formData.cost_per_impact) <= 0) {
+      newErrors.cost_per_impact = "Cost per impact must be greater than 0";
+    }
+    if (parseFloat(formData.goal_amount) <= 0) {
+      newErrors.goal_amount = "Goal amount must be greater than 0";
+    }
+    
+    const endDate = new Date(formData.end_date);
+    const today = new Date();
+    if (endDate <= today) {
+      newErrors.end_date = "End date must be in the future";
+    }
+    
+    if (formData.payment_methods_accepted.length === 0) {
+      newErrors.payment_methods_accepted = "At least one payment method must be selected";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const causeData = {
+        ...formData,
+        cost_per_impact: parseFloat(formData.cost_per_impact),
+        goal_amount: parseFloat(formData.goal_amount),
+        end_date: new Date(formData.end_date).toISOString(),
+        creator_id: currentUser.id,
+        creator_type: userType
+      };
+      
+      await axios.post(`${API}/causes`, causeData);
+      onCauseCreated();
+    } catch (error) {
+      console.error("Error creating cause:", error);
+      setErrors({
+        submit: error.response?.data?.detail || "Failed to create cause. Please try again."
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const categories = ["Education", "Health", "Environment", "Poverty"];
+  const paymentMethods = [
+    { value: "card", label: "Credit/Debit Card", icon: "💳" },
+    { value: "momo", label: "Mobile Money", icon: "📱" },
+    { value: "bank_transfer", label: "Bank Transfer", icon: "🏦" },
+    { value: "papss", label: "PAPSS", icon: "💰" }
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">Create New Cause</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Information */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cause Name *</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.name ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter cause name"
+              />
+              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                {categories.map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              rows={4}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                errors.description ? "border-red-500" : "border-gray-300"
+              }`}
+              placeholder="Describe your cause and its impact..."
+            />
+            {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+          </div>
+
+          {/* Impact Information */}
+          <div className="grid md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Impact Metric *</label>
+              <input
+                type="text"
+                name="impact_metric"
+                value={formData.impact_metric}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.impact_metric ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="e.g., children educated"
+              />
+              {errors.impact_metric && <p className="text-red-500 text-sm mt-1">{errors.impact_metric}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cost per Impact ($) *</label>
+              <input
+                type="number"
+                name="cost_per_impact"
+                value={formData.cost_per_impact}
+                onChange={handleInputChange}
+                min="0.01"
+                step="0.01"
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.cost_per_impact ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="25.00"
+              />
+              {errors.cost_per_impact && <p className="text-red-500 text-sm mt-1">{errors.cost_per_impact}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Goal Amount ($) *</label>
+              <input
+                type="number"
+                name="goal_amount"
+                value={formData.goal_amount}
+                onChange={handleInputChange}
+                min="1"
+                step="0.01"
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.goal_amount ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="10000.00"
+              />
+              {errors.goal_amount && <p className="text-red-500 text-sm mt-1">{errors.goal_amount}</p>}
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
+              <input
+                type="date"
+                name="end_date"
+                value={formData.end_date}
+                onChange={handleInputChange}
+                min={new Date().toISOString().split('T')[0]}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.end_date ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.end_date && <p className="text-red-500 text-sm mt-1">{errors.end_date}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Image URL (Optional)</label>
+              <input
+                type="url"
+                name="image_url"
+                value={formData.image_url}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+          </div>
+
+          {/* Payment Methods */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Accepted Payment Methods *</label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {paymentMethods.map(method => (
+                <label key={method.value} className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.payment_methods_accepted.includes(method.value)}
+                    onChange={() => handlePaymentMethodChange(method.value)}
+                    className="text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm">{method.icon} {method.label}</span>
+                </label>
+              ))}
+            </div>
+            {errors.payment_methods_accepted && (
+              <p className="text-red-500 text-sm mt-1">{errors.payment_methods_accepted}</p>
+            )}
+          </div>
+
+          {/* Volunteer Opportunities */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Volunteer Opportunities</label>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={newVolunteerOpp}
+                onChange={(e) => setNewVolunteerOpp(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., tutoring, curriculum development"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addVolunteerOpportunity();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={addVolunteerOpportunity}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              >
+                Add
+              </button>
+            </div>
+            
+            {formData.volunteer_opportunities.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {formData.volunteer_opportunities.map((opp, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                  >
+                    {opp}
+                    <button
+                      type="button"
+                      onClick={() => removeVolunteerOpportunity(index)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {errors.submit && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800">{errors.submit}</p>
+            </div>
+          )}
+
+          {/* Submit Buttons */}
+          <div className="flex gap-4 pt-6">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? "Creating Cause..." : "Create Cause"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-400 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // Enhanced Cause Browser Component with Filtering and Expiry
 const CauseBrowser = () => {
   const [causes, setCauses] = useState([]);
