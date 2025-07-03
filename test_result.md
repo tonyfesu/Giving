@@ -652,17 +652,20 @@ test_plan:
         agent: "testing"
         comment: "✅ Performance Metrics Endpoint: Working correctly with comprehensive metrics. ❌ Admin Settlements Endpoint: ObjectId serialization issue (500 error). ❌ Create Cause Endpoint: USSD shortcode generation issue. ✅ Payment Processing: Working correctly. Need to fix ObjectId serialization and USSD shortcode generation."
 
-  - task: "Enhanced Admin Settlements Endpoint"
+  - task: "Admin Settlements Endpoint"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
         comment: "Enhanced Admin Settlements endpoint has issues. GET /api/admin/settlements returns a 500 Internal Server Error. The error in the logs shows an issue with ObjectId serialization: 'ObjectId' object is not iterable. This is a common issue when working with MongoDB, where ObjectId objects need to be converted to strings before being returned in the API response."
+      - working: true
+        agent: "testing"
+        comment: "Admin Settlements endpoint is now working correctly. The ObjectId serialization issue has been fixed by adding {'_id': 0} projection to the MongoDB queries. The endpoint now returns proper settlement data with cause information, including direct donations and business donations per cause. The response structure includes settlements and summary sections as expected."
 
   - task: "Create Cause Endpoint"
     implemented: true
