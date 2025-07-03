@@ -1516,9 +1516,9 @@ async def get_sdk_information():
                 "install_url": "https://apps.shopify.com/nnoboa"
             },
             "woocommerce": {
-                "name": "ImpactLink for WooCommerce",
+                "name": "Nnoboa for WooCommerce",
                 "description": "WordPress plugin for WooCommerce stores",
-                "install_url": "https://wordpress.org/plugins/impactlink"
+                "install_url": "https://wordpress.org/plugins/nnoboa"
             }
         }
     }
