@@ -1838,7 +1838,371 @@ const AdminDashboard = () => {
     </div>
   );
 };
-const DeveloperPlatform = () => <div></div>;
+const DeveloperPlatform = () => {
+  const [selectedTab, setSelectedTab] = useState("docs");
+  const [apiDocs, setApiDocs] = useState(null);
+  const [codeExamples, setCodeExamples] = useState(null);
+  const [sdkInfo, setSdkInfo] = useState(null);
+
+  useEffect(() => {
+    fetchDeveloperResources();
+  }, []);
+
+  const fetchDeveloperResources = async () => {
+    try {
+      const [docsResponse, examplesResponse, sdkResponse] = await Promise.all([
+        axios.get(`${API}/dev/docs`),
+        axios.get(`${API}/dev/code-examples`),
+        axios.get(`${API}/dev/sdk`)
+      ]);
+      
+      setApiDocs(docsResponse.data);
+      setCodeExamples(examplesResponse.data);
+      setSdkInfo(sdkResponse.data);
+    } catch (error) {
+      console.error("Error fetching developer resources:", error);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied to clipboard!");
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto p-6">
+      <div className="bg-white rounded-xl shadow-lg">
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-3xl font-bold text-gray-800">ImpactLink Developer Platform</h1>
+          <p className="text-gray-600 mt-2">Everything you need to integrate social impact into your applications</p>
+        </div>
+
+        <div className="p-6">
+          <div className="mb-6">
+            <div className="flex border-b border-gray-200">
+              <button
+                onClick={() => setSelectedTab("docs")}
+                className={`px-4 py-2 font-medium ${selectedTab === "docs" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600"}`}
+              >
+                API Documentation
+              </button>
+              <button
+                onClick={() => setSelectedTab("examples")}
+                className={`px-4 py-2 font-medium ${selectedTab === "examples" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600"}`}
+              >
+                Code Examples
+              </button>
+              <button
+                onClick={() => setSelectedTab("sdks")}
+                className={`px-4 py-2 font-medium ${selectedTab === "sdks" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600"}`}
+              >
+                SDKs & Tools
+              </button>
+              <button
+                onClick={() => setSelectedTab("testing")}
+                className={`px-4 py-2 font-medium ${selectedTab === "testing" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600"}`}
+              >
+                API Testing
+              </button>
+            </div>
+          </div>
+
+          {selectedTab === "docs" && apiDocs && (
+            <div className="space-y-6">
+              <div className="bg-blue-50 p-6 rounded-lg">
+                <h2 className="text-2xl font-bold text-blue-800 mb-2">{apiDocs.title}</h2>
+                <p className="text-blue-700 mb-4">{apiDocs.description}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-semibold">Base URL:</span> {apiDocs.base_url}
+                  </div>
+                  <div>
+                    <span className="font-semibold">Authentication:</span> {apiDocs.authentication.type}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold text-gray-800">Quick Start</h3>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-gray-700 mb-2">1. Get API Key</h4>
+                    <p className="text-sm text-gray-600 mb-3">Register your business and get your API key from the dashboard.</p>
+                    
+                    <h4 className="font-semibold text-gray-700 mb-2">2. Make Your First Call</h4>
+                    <div className="bg-gray-800 text-green-400 p-3 rounded text-sm font-mono">
+                      curl -H "Authorization: Bearer YOUR_API_KEY" \\<br/>
+                      &nbsp;&nbsp;{apiDocs.base_url}/api/causes
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold text-gray-800">Rate Limits</h3>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Per Minute:</span>
+                        <span className="font-semibold">{apiDocs.rate_limiting?.requests_per_minute || 1000}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Per Day:</span>
+                        <span className="font-semibold">{apiDocs.rate_limiting?.requests_per_day || 50000}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">API Endpoints</h3>
+                <div className="space-y-4">
+                  {Object.entries(apiDocs.endpoints).map(([category, endpoints]) => (
+                    <div key={category} className="border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-700 mb-3 capitalize">{category.replace('_', ' ')}</h4>
+                      <div className="space-y-2">
+                        {Object.entries(endpoints).map(([endpoint, description]) => (
+                          <div key={endpoint} className="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-gray-100 last:border-b-0">
+                            <code className="text-sm bg-gray-100 px-2 py-1 rounded">{endpoint}</code>
+                            <span className="text-sm text-gray-600 mt-1 sm:mt-0">{description}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedTab === "examples" && codeExamples && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Language Examples</h3>
+                  <div className="space-y-2">
+                    {Object.keys(codeExamples).map((language) => (
+                      <button
+                        key={language}
+                        className="block w-full text-left px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors capitalize"
+                      >
+                        {language}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="lg:col-span-2">
+                  <div className="space-y-6">
+                    {Object.entries(codeExamples).map(([language, examples]) => (
+                      <div key={language} className="border border-gray-200 rounded-lg p-4">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-4 capitalize">{language}</h4>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <h5 className="font-medium text-gray-700 mb-2">Installation</h5>
+                            <div className="bg-gray-800 text-green-400 p-3 rounded text-sm font-mono relative">
+                              <button
+                                onClick={() => copyToClipboard(examples.install)}
+                                className="absolute top-2 right-2 text-gray-400 hover:text-white"
+                              >
+                                📋
+                              </button>
+                              {examples.install}
+                            </div>
+                          </div>
+
+                          <div>
+                            <h5 className="font-medium text-gray-700 mb-2">Setup</h5>
+                            <div className="bg-gray-800 text-green-400 p-3 rounded text-sm font-mono relative">
+                              <button
+                                onClick={() => copyToClipboard(examples.setup)}
+                                className="absolute top-2 right-2 text-gray-400 hover:text-white"
+                              >
+                                📋
+                              </button>
+                              <pre className="whitespace-pre-wrap">{examples.setup}</pre>
+                            </div>
+                          </div>
+
+                          {examples.create_transaction && (
+                            <div>
+                              <h5 className="font-medium text-gray-700 mb-2">Create Transaction</h5>
+                              <div className="bg-gray-800 text-green-400 p-3 rounded text-sm font-mono relative">
+                                <button
+                                  onClick={() => copyToClipboard(examples.create_transaction)}
+                                  className="absolute top-2 right-2 text-gray-400 hover:text-white"
+                                >
+                                  📋
+                                </button>
+                                <pre className="whitespace-pre-wrap">{examples.create_transaction}</pre>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedTab === "sdks" && sdkInfo && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Object.entries(sdkInfo.sdks).map(([language, sdk]) => (
+                  <div key={language} className="border border-gray-200 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2 capitalize">{language}</h3>
+                    <p className="text-gray-600 mb-4">{sdk.name} v{sdk.version}</p>
+                    
+                    <div className="space-y-3">
+                      <div className="bg-gray-100 p-3 rounded">
+                        <code className="text-sm">{sdk.install}</code>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-gray-700">Features:</h4>
+                        <ul className="text-sm text-gray-600 space-y-1">
+                          {sdk.features?.map((feature, index) => (
+                            <li key={index}>• {feature}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <a href={sdk.docs} className="text-blue-600 hover:text-blue-800 text-sm">Docs</a>
+                        <a href={sdk.github} className="text-blue-600 hover:text-blue-800 text-sm">GitHub</a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {sdkInfo.integrations && (
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Platform Integrations</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-medium text-gray-700 mb-3">E-commerce Platforms</h4>
+                      <div className="space-y-2">
+                        {Object.entries(sdkInfo.integrations.e_commerce).map(([platform, url]) => (
+                          <div key={platform} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                            <span className="capitalize">{platform}</span>
+                            <a href={url} className="text-blue-600 hover:text-blue-800 text-sm">Install</a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium text-gray-700 mb-3">Frontend Frameworks</h4>
+                      <div className="space-y-2">
+                        {Object.entries(sdkInfo.integrations.frameworks).map(([framework, command]) => (
+                          <div key={framework} className="p-3 bg-gray-50 rounded">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="capitalize font-medium">{framework}</span>
+                            </div>
+                            <code className="text-sm text-gray-600">{command}</code>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {selectedTab === "testing" && (
+            <div className="space-y-6">
+              <div className="bg-yellow-50 p-6 rounded-lg">
+                <h3 className="text-xl font-semibold text-yellow-800 mb-2">API Testing Environment</h3>
+                <p className="text-yellow-700">Test API endpoints directly from your browser with real data.</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Interactive Testing</h4>
+                  <div className="space-y-4">
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-700 mb-2">GET /api/causes</h5>
+                      <p className="text-sm text-gray-600 mb-3">Fetch all available causes</p>
+                      <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Test Endpoint
+                      </button>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-700 mb-2">POST /api/transactions</h5>
+                      <p className="text-sm text-gray-600 mb-3">Create a new transaction</p>
+                      <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Test Endpoint
+                      </button>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-700 mb-2">POST /api/contributions</h5>
+                      <p className="text-sm text-gray-600 mb-3">Create direct contribution</p>
+                      <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Test Endpoint
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Test Data</h4>
+                  <div className="space-y-4">
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-700 mb-2">Demo Accounts</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Business:</span>
+                          <span className="font-mono">EcoTech Solutions</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Customer:</span>
+                          <span className="font-mono">Sarah Green</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Admin:</span>
+                          <span className="font-mono">demo_admin</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-700 mb-2">Test Payment Methods</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Success Card:</span>
+                          <span className="font-mono">4242424242424242</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Decline Card:</span>
+                          <span className="font-mono">4000000000000002</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-700 mb-2">Postman Collection</h5>
+                      <p className="text-sm text-gray-600 mb-3">Import our complete API collection</p>
+                      <button className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">
+                        Download Collection
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Main App Content Component
 function AppContent() {
