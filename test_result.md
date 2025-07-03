@@ -577,10 +577,7 @@ test_plan:
     - "Share Feature"
     - "Comments System"
     - "Emoji Reactions"
-  stuck_tasks: 
-    - "Share Feature"
-    - "Comments System"
-    - "Emoji Reactions"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
