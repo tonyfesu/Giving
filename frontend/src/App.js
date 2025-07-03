@@ -1279,6 +1279,357 @@ const FeaturesSection = () => {
 const CustomerRegistration = ({ onCustomerCreate }) => <div></div>;
 const BusinessSetup = ({ onBusinessCreate }) => <div></div>;
 const BusinessDashboard = ({ business }) => <div></div>;
+
+// User Cause Creation Component
+const CreateCauseForm = () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    category: "Education",
+    impact_metric: "",
+    cost_per_impact: "",
+    goal_amount: "",
+    end_date: "",
+    image_url: "",
+    payment_methods_accepted: ["card", "momo", "bank_transfer"],
+    volunteer_opportunities: [],
+    settlement_info: {
+      account_number: "",
+      phone_number: "",
+      bank_name: "",
+      account_type: "checking"
+    }
+  });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const { currentUser, userType } = useUser();
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name.startsWith('settlement_')) {
+      const field = name.replace('settlement_', '');
+      setFormData(prev => ({
+        ...prev,
+        settlement_info: {
+          ...prev.settlement_info,
+          [field]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await axios.post(`${API}/users/${currentUser.id}/causes?user_type=${userType}`, {
+        ...formData,
+        cost_per_impact: parseFloat(formData.cost_per_impact),
+        goal_amount: parseFloat(formData.goal_amount),
+        end_date: new Date(formData.end_date).toISOString(),
+        volunteer_opportunities: formData.volunteer_opportunities.filter(v => v.trim())
+      });
+
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setFormData({
+          name: "",
+          description: "",
+          category: "Education",
+          impact_metric: "",
+          cost_per_impact: "",
+          goal_amount: "",
+          end_date: "",
+          image_url: "",
+          payment_methods_accepted: ["card", "momo", "bank_transfer"],
+          volunteer_opportunities: [],
+          settlement_info: {
+            account_number: "",
+            phone_number: "",
+            bank_name: "",
+            account_type: "checking"
+          }
+        });
+      }, 3000);
+    } catch (error) {
+      console.error("Error creating cause:", error);
+      alert("Failed to create cause. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addVolunteerOpportunity = () => {
+    setFormData(prev => ({
+      ...prev,
+      volunteer_opportunities: [...prev.volunteer_opportunities, ""]
+    }));
+  };
+
+  const updateVolunteerOpportunity = (index, value) => {
+    setFormData(prev => ({
+      ...prev,
+      volunteer_opportunities: prev.volunteer_opportunities.map((item, i) => 
+        i === index ? value : item
+      )
+    }));
+  };
+
+  const removeVolunteerOpportunity = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      volunteer_opportunities: prev.volunteer_opportunities.filter((_, i) => i !== index)
+    }));
+  };
+
+  if (success) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center">
+          <div className="text-green-600 text-6xl mb-4">✓</div>
+          <h2 className="text-2xl font-bold text-green-800 mb-2">Cause Created Successfully!</h2>
+          <p className="text-green-700">Your cause has been created and is now live on the platform.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="bg-white rounded-xl shadow-lg p-8">
+        <h2 className="text-3xl font-bold text-gray-800 mb-6">Create Your Cause</h2>
+        <p className="text-gray-600 mb-8">Share your mission and start making an impact</p>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cause Name *</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                placeholder="e.g., Community Education Initiative"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              >
+                <option value="Education">Education</option>
+                <option value="Health">Health</option>
+                <option value="Environment">Environment</option>
+                <option value="Poverty">Poverty</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              required
+              rows="4"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              placeholder="Describe your cause and its impact..."
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Impact Metric *</label>
+              <input
+                type="text"
+                name="impact_metric"
+                value={formData.impact_metric}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                placeholder="e.g., children educated"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cost Per Impact ($) *</label>
+              <input
+                type="number"
+                name="cost_per_impact"
+                value={formData.cost_per_impact}
+                onChange={handleInputChange}
+                required
+                step="0.01"
+                min="0"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                placeholder="25.00"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Goal Amount ($) *</label>
+              <input
+                type="number"
+                name="goal_amount"
+                value={formData.goal_amount}
+                onChange={handleInputChange}
+                required
+                step="0.01"
+                min="0"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                placeholder="10000.00"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
+              <input
+                type="date"
+                name="end_date"
+                value={formData.end_date}
+                onChange={handleInputChange}
+                required
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Image URL (optional)</label>
+              <input
+                type="url"
+                name="image_url"
+                value={formData.image_url}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+          </div>
+
+          {/* Settlement Information */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Settlement Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Account Number *</label>
+                <input
+                  type="text"
+                  name="settlement_account_number"
+                  value={formData.settlement_info.account_number}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  placeholder="Bank account number"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                <input
+                  type="tel"
+                  name="settlement_phone_number"
+                  value={formData.settlement_info.phone_number}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  placeholder="+1-234-567-8900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Bank Name *</label>
+                <input
+                  type="text"
+                  name="settlement_bank_name"
+                  value={formData.settlement_info.bank_name}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  placeholder="Bank name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Account Type</label>
+                <select
+                  name="settlement_account_type"
+                  value={formData.settlement_info.account_type}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                >
+                  <option value="checking">Checking</option>
+                  <option value="savings">Savings</option>
+                  <option value="momo">Mobile Money</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Volunteer Opportunities */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Volunteer Opportunities</h3>
+            <div className="space-y-3">
+              {formData.volunteer_opportunities.map((opportunity, index) => (
+                <div key={index} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={opportunity}
+                    onChange={(e) => updateVolunteerOpportunity(index, e.target.value)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                    placeholder="e.g., tutoring, event organization"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeVolunteerOpportunity(index)}
+                    className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addVolunteerOpportunity}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+              >
+                Add Volunteer Opportunity
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-6">
+            <button
+              type="submit"
+              disabled={loading}
+              className={`px-8 py-3 rounded-lg font-semibold text-white transition-all ${
+                loading 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-500 hover:bg-blue-600'
+              }`}
+            >
+              {loading ? 'Creating Cause...' : 'Create Cause'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 const AdminDashboard = () => {
   const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
