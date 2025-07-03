@@ -248,6 +248,42 @@ class APIKeyCreate(BaseModel):
     description: str
     permissions: List[str] = Field(default_factory=list)
 
+# Enhanced Settlement and Payment Models
+class CauseSettlement(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    cause_id: str
+    total_donations_received: float = 0.0
+    last_settlement_date: Optional[datetime] = None
+    pending_amount: float = 0.0
+    total_settled: float = 0.0
+    settlement_account_info: Optional[SettlementInfo] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SettlementPayment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    cause_id: str
+    settlement_id: str
+    amount: float
+    payment_method: PaymentMethod
+    status: str = "initiated"  # initiated, processing, completed, failed
+    initiated_by: str  # admin user id
+    payment_reference: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
+
+class UserCauseCreate(BaseModel):
+    name: str
+    description: str
+    category: str
+    impact_metric: str
+    cost_per_impact: float
+    goal_amount: float
+    end_date: datetime
+    image_url: Optional[str] = None
+    payment_methods_accepted: List[str] = Field(default_factory=lambda: ["card", "momo", "bank_transfer"])
+    volunteer_opportunities: List[str] = Field(default_factory=list)
+    settlement_info: SettlementInfo
+
 # Subscription plans
 SUBSCRIPTION_PLANS = {
     "individual": {
