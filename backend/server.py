@@ -1528,7 +1528,7 @@ async def get_code_examples():
     """Get code examples for different programming languages"""
     return {
         "javascript": {
-            "install": "npm install @impactlink/js-sdk",
+            "install": "npm install @nnoboa/js-sdk",
             "setup": """
 const ImpactLink = require('@impactlink/js-sdk');
 const client = new ImpactLink({
