@@ -1001,6 +1001,84 @@ async def get_contributions(
     contributions = await db.direct_contributions.find(query).sort("timestamp", -1).to_list(1000)
     return [DirectContribution(**contribution) for contribution in contributions]
 
+# Payment processing endpoint
+@api_router.post("/payments/process")
+async def process_payment(payment_data: dict):
+    """Process payment for subscriptions and donations"""
+    try:
+        # Extract payment details
+        amount = payment_data.get("amount", 0)
+        currency = payment_data.get("currency", "USD")
+        method = payment_data.get("method", {})
+        description = payment_data.get("description", "Payment")
+        user_id = payment_data.get("user_id")
+        user_type = payment_data.get("user_type")
+        
+        # Validate required fields
+        if not amount or amount <= 0:
+            raise HTTPException(status_code=400, detail="Invalid payment amount")
+        
+        if not method or not method.get("type"):
+            raise HTTPException(status_code=400, detail="Payment method is required")
+        
+        # For demo purposes, simulate payment processing
+        # In a real application, this would integrate with actual payment processors
+        payment_method_type = method.get("type")
+        
+        if payment_method_type == "card":
+            # Simulate card payment processing
+            card_number = method.get("card_number", "").replace(" ", "")
+            if len(card_number) < 13:
+                raise HTTPException(status_code=400, detail="Invalid card number")
+            
+        elif payment_method_type == "momo":
+            # Simulate mobile money processing
+            phone_number = method.get("phone_number")
+            if not phone_number:
+                raise HTTPException(status_code=400, detail="Phone number is required for mobile money")
+                
+        elif payment_method_type == "bank_transfer":
+            # Simulate bank transfer processing
+            account_number = method.get("account_number")
+            if not account_number:
+                raise HTTPException(status_code=400, detail="Account number is required for bank transfer")
+                
+        elif payment_method_type == "papss":
+            # Simulate PAPSS processing
+            papss_reference = method.get("papss_reference")
+            if not papss_reference:
+                raise HTTPException(status_code=400, detail="PAPSS reference is required")
+        
+        # Create payment record
+        payment_record = {
+            "id": str(uuid.uuid4()),
+            "amount": amount,
+            "currency": currency,
+            "method": method,
+            "status": "completed",  # Simulate successful payment
+            "description": description,
+            "user_id": user_id,
+            "user_type": user_type,
+            "created_at": datetime.utcnow(),
+            "transaction_id": f"txn_{uuid.uuid4().hex[:12]}"
+        }
+        
+        # Store payment record (optional)
+        await db.payments.insert_one(payment_record)
+        
+        return {
+            "status": "completed",
+            "transaction_id": payment_record["transaction_id"],
+            "amount": amount,
+            "currency": currency,
+            "message": "Payment processed successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Payment processing failed: {str(e)}")
+
 # Subscription endpoints
 @api_router.post("/subscriptions", response_model=Subscription)
 async def create_subscription(subscription_data: SubscriptionCreate, user_id: str, user_type: str):
