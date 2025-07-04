@@ -4840,13 +4840,26 @@ const CreateCauseForm = () => {
   );
 };
 const AdminDashboard = () => {
+  const [performanceMetrics, setPerformanceMetrics] = useState(null);
   const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState("settlements");
+  const [selectedTab, setSelectedTab] = useState("overview");
 
   useEffect(() => {
-    fetchSettlements();
+    Promise.all([
+      fetchPerformanceMetrics(),
+      fetchSettlements()
+    ]);
   }, []);
+
+  const fetchPerformanceMetrics = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/performance-metrics`);
+      setPerformanceMetrics(response.data);
+    } catch (error) {
+      console.error("Error fetching performance metrics:", error);
+    }
+  };
 
   const fetchSettlements = async () => {
     try {
@@ -4877,42 +4890,471 @@ const AdminDashboard = () => {
     }
   };
 
-  if (loading) {
+  if (loading || !performanceMetrics) {
     return (
       <div className="max-w-7xl mx-auto p-6">
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg text-gray-600">Loading settlement data...</div>
+          <div className="text-lg text-gray-600">Loading admin dashboard...</div>
         </div>
       </div>
     );
   }
 
+  const { overview, financial_metrics, performance_metrics, growth_analytics, category_analysis, payment_analysis, top_performers, social_engagement, platform_health } = performanceMetrics;
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="bg-white rounded-xl shadow-lg">
         <div className="p-6 border-b border-gray-200">
-          <h1 className="text-3xl font-bold text-gray-800">Admin Settlement Center</h1>
-          <p className="text-gray-600 mt-2">Manage cause settlements and payments</p>
+          <h1 className="text-3xl font-bold text-gray-800">Platform Performance Dashboard</h1>
+          <p className="text-gray-600 mt-2">Comprehensive analytics and management for Nnoboa platform</p>
         </div>
 
         <div className="p-6">
+          {/* Tab Navigation */}
           <div className="mb-6">
-            <div className="flex border-b border-gray-200">
-              <button
-                onClick={() => setSelectedTab("settlements")}
-                className={`px-4 py-2 font-medium ${selectedTab === "settlements" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600"}`}
-              >
-                Settlement Overview
-              </button>
-              <button
-                onClick={() => setSelectedTab("analytics")}
-                className={`px-4 py-2 font-medium ${selectedTab === "analytics" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600"}`}
-              >
-                Payment Analytics
-              </button>
+            <div className="flex border-b border-gray-200 overflow-x-auto">
+              {[
+                { id: "overview", label: "Overview" },
+                { id: "financial", label: "Financial" },
+                { id: "growth", label: "Growth" },
+                { id: "categories", label: "Categories" },
+                { id: "users", label: "Top Users" },
+                { id: "platform-health", label: "Platform Health" },
+                { id: "settlements", label: "Settlements" }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setSelectedTab(tab.id)}
+                  className={`px-4 py-2 font-medium whitespace-nowrap ${
+                    selectedTab === tab.id ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-blue-600"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
+          {/* Overview Tab */}
+          {selectedTab === "overview" && (
+            <div className="space-y-6">
+              {/* Key Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-blue-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-blue-800">Total Users</h3>
+                  <p className="text-3xl font-bold text-blue-600">{overview.total_users}</p>
+                  <p className="text-sm text-blue-600 mt-1">
+                    {overview.total_businesses} businesses • {overview.total_customers} customers
+                  </p>
+                </div>
+                <div className="bg-green-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-green-800">Active Causes</h3>
+                  <p className="text-3xl font-bold text-green-600">{overview.active_causes}</p>
+                  <p className="text-sm text-green-600 mt-1">
+                    {overview.total_causes} total • {overview.expired_causes} expired
+                  </p>
+                </div>
+                <div className="bg-purple-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-purple-800">Total Revenue</h3>
+                  <p className="text-3xl font-bold text-purple-600">
+                    ${financial_metrics.total_platform_revenue.toFixed(0)}
+                  </p>
+                  <p className="text-sm text-purple-600 mt-1">All revenue streams</p>
+                </div>
+                <div className="bg-orange-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-orange-800">Total Impact</h3>
+                  <p className="text-3xl font-bold text-orange-600">
+                    ${(financial_metrics.business_impact + financial_metrics.customer_contributions).toFixed(0)}
+                  </p>
+                  <p className="text-sm text-orange-600 mt-1">Social impact generated</p>
+                </div>
+              </div>
+
+              {/* Activity Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Platform Activity</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Transactions</span>
+                      <span className="font-semibold">{overview.total_transactions}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Direct Contributions</span>
+                      <span className="font-semibold">{overview.total_contributions}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Anonymous Contributions</span>
+                      <span className="font-semibold">{overview.anonymous_contributions}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Active Subscriptions</span>
+                      <span className="font-semibold">{overview.active_subscriptions}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Social Engagement</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Shares</span>
+                      <span className="font-semibold">{social_engagement.total_shares}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Comments</span>
+                      <span className="font-semibold">{social_engagement.total_comments}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Reactions</span>
+                      <span className="font-semibold">{social_engagement.total_reactions}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Engagement Rate</span>
+                      <span className="font-semibold">{social_engagement.engagement_rate.toFixed(1)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Financial Tab */}
+          {selectedTab === "financial" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-green-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-green-800">Business Impact</h3>
+                  <p className="text-2xl font-bold text-green-600">
+                    ${financial_metrics.business_impact.toFixed(0)}
+                  </p>
+                  <p className="text-sm text-green-600 mt-1">
+                    Avg: ${financial_metrics.avg_business_impact.toFixed(0)}
+                  </p>
+                </div>
+                <div className="bg-blue-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-blue-800">Customer Contributions</h3>
+                  <p className="text-2xl font-bold text-blue-600">
+                    ${financial_metrics.customer_contributions.toFixed(0)}
+                  </p>
+                  <p className="text-sm text-blue-600 mt-1">
+                    Avg: ${financial_metrics.avg_contribution.toFixed(0)}
+                  </p>
+                </div>
+                <div className="bg-purple-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-purple-800">Subscription Revenue</h3>
+                  <p className="text-2xl font-bold text-purple-600">
+                    ${financial_metrics.subscription_revenue.toFixed(0)}
+                  </p>
+                  <p className="text-sm text-purple-600 mt-1">Monthly recurring</p>
+                </div>
+              </div>
+              
+              {/* Payment Methods Analysis */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Payment Method Performance</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2">Payment Method</th>
+                        <th className="text-right py-2">Usage Count</th>
+                        <th className="text-right py-2">Total Volume</th>
+                        <th className="text-right py-2">Avg Amount</th>
+                        <th className="text-right py-2">Market Share</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payment_analysis.map((method, index) => (
+                        <tr key={index} className="border-b">
+                          <td className="py-2 font-medium">{method.method || 'Unknown'}</td>
+                          <td className="py-2 text-right">{method.usage_count}</td>
+                          <td className="py-2 text-right">${method.total_volume.toFixed(0)}</td>
+                          <td className="py-2 text-right">${method.avg_amount.toFixed(0)}</td>
+                          <td className="py-2 text-right">{method.market_share.toFixed(1)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Growth Tab */}
+          {selectedTab === "growth" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="bg-blue-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-blue-800">User Growth</h3>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {growth_analytics.growth_rates.businesses >= 0 ? '+' : ''}{growth_analytics.growth_rates.businesses.toFixed(1)}%
+                  </p>
+                  <p className="text-sm text-blue-600 mt-1">Business growth rate</p>
+                </div>
+                <div className="bg-green-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-green-800">Customer Growth</h3>
+                  <p className="text-2xl font-bold text-green-600">
+                    {growth_analytics.growth_rates.customers >= 0 ? '+' : ''}{growth_analytics.growth_rates.customers.toFixed(1)}%
+                  </p>
+                  <p className="text-sm text-green-600 mt-1">Customer growth rate</p>
+                </div>
+                <div className="bg-purple-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-purple-800">Activity Growth</h3>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {growth_analytics.growth_rates.transactions >= 0 ? '+' : ''}{growth_analytics.growth_rates.transactions.toFixed(1)}%
+                  </p>
+                  <p className="text-sm text-purple-600 mt-1">Transaction growth rate</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Recent Activity (30 days)</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">New Businesses</span>
+                      <span className="font-semibold text-blue-600">{growth_analytics.recent_activity.new_businesses}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">New Customers</span>
+                      <span className="font-semibold text-green-600">{growth_analytics.recent_activity.new_customers}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">New Causes</span>
+                      <span className="font-semibold text-purple-600">{growth_analytics.recent_activity.new_causes}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Recent Transactions</span>
+                      <span className="font-semibold text-orange-600">{growth_analytics.recent_activity.recent_transactions}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Trend Indicators</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">User Growth</span>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        growth_analytics.trend_indicators.user_growth === 'positive' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {growth_analytics.trend_indicators.user_growth}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Activity Growth</span>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        growth_analytics.trend_indicators.activity_growth === 'positive' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {growth_analytics.trend_indicators.activity_growth}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Cause Creation</span>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        growth_analytics.trend_indicators.cause_creation_growth === 'positive' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {growth_analytics.trend_indicators.cause_creation_growth}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Categories Tab */}
+          {selectedTab === "categories" && (
+            <div className="space-y-6">
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Category Performance</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2">Category</th>
+                        <th className="text-right py-2">Total Causes</th>
+                        <th className="text-right py-2">Active Causes</th>
+                        <th className="text-right py-2">Total Raised</th>
+                        <th className="text-right py-2">Avg Performance</th>
+                        <th className="text-right py-2">Market Share</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {category_analysis.map((category, index) => (
+                        <tr key={index} className="border-b">
+                          <td className="py-2 font-medium">{category.category}</td>
+                          <td className="py-2 text-right">{category.total_causes}</td>
+                          <td className="py-2 text-right">{category.active_causes}</td>
+                          <td className="py-2 text-right">${category.total_raised.toFixed(0)}</td>
+                          <td className="py-2 text-right">${category.avg_performance.toFixed(0)}</td>
+                          <td className="py-2 text-right">{category.market_share.toFixed(1)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Top Users Tab */}
+          {selectedTab === "users" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Top Businesses */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Top Businesses</h3>
+                  <div className="space-y-3">
+                    {top_performers.businesses.map((business, index) => (
+                      <div key={business.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium">{business.name}</p>
+                          <p className="text-sm text-gray-600">{business.industry}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-600">${business.total_impact.toFixed(0)}</p>
+                          <p className="text-sm text-gray-600">{business.transaction_count} transactions</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Top Customers */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Top Contributors</h3>
+                  <div className="space-y-3">
+                    {top_performers.customers.map((customer, index) => (
+                      <div key={customer.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium">{customer.name}</p>
+                          <p className="text-sm text-gray-600">{customer.contribution_count} contributions</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-blue-600">${customer.total_contributions.toFixed(0)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Top Causes */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Top Performing Causes</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2">Cause Name</th>
+                        <th className="text-left py-2">Category</th>
+                        <th className="text-left py-2">Creator</th>
+                        <th className="text-right py-2">Total Raised</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {top_performers.causes.map((cause, index) => (
+                        <tr key={cause.id} className="border-b">
+                          <td className="py-2 font-medium">{cause.name}</td>
+                          <td className="py-2">{cause.category}</td>
+                          <td className="py-2">
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              cause.creator_type === 'business' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                            }`}>
+                              {cause.creator_name}
+                            </span>
+                          </td>
+                          <td className="py-2 text-right font-bold text-green-600">${cause.total_raised.toFixed(0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Platform Health Tab */}
+          {selectedTab === "platform-health" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-orange-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-orange-800">Causes Expiring Soon</h3>
+                  <p className="text-2xl font-bold text-orange-600">{platform_health.causes_expiring_soon}</p>
+                  <p className="text-sm text-orange-600 mt-1">Within 7 days</p>
+                </div>
+                <div className="bg-red-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-red-800">Subscription Churn</h3>
+                  <p className="text-2xl font-bold text-red-600">{platform_health.subscription_churn_rate.toFixed(1)}%</p>
+                  <p className="text-sm text-red-600 mt-1">Monthly churn rate</p>
+                </div>
+                <div className="bg-green-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-green-800">Cause Completion</h3>
+                  <p className="text-2xl font-bold text-green-600">{platform_health.cause_completion_rate.toFixed(1)}%</p>
+                  <p className="text-sm text-green-600 mt-1">Completion rate</p>
+                </div>
+                <div className="bg-blue-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-blue-800">User Engagement</h3>
+                  <p className="text-2xl font-bold text-blue-600">{platform_health.user_engagement_score.toFixed(1)}</p>
+                  <p className="text-sm text-blue-600 mt-1">Engagement score</p>
+                </div>
+              </div>
+              
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Platform Health Status</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-2">Health Indicators</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>Subscription Retention</span>
+                        <span className={`font-medium ${overview.subscription_retention_rate > 80 ? 'text-green-600' : overview.subscription_retention_rate > 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {overview.subscription_retention_rate.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Platform Efficiency</span>
+                        <span className="font-medium text-blue-600">
+                          {performance_metrics.platform_impact_efficiency.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Avg Cause Performance</span>
+                        <span className="font-medium text-purple-600">
+                          ${performance_metrics.avg_cause_performance.toFixed(0)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-2">Performance Ratios</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>Causes per Business</span>
+                        <span className="font-medium">{performance_metrics.causes_per_business.toFixed(1)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Contributions per Customer</span>
+                        <span className="font-medium">{performance_metrics.contributions_per_customer.toFixed(1)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Settlements Tab */}
           {selectedTab === "settlements" && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -5000,45 +5442,6 @@ const AdminDashboard = () => {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
-          )}
-
-          {selectedTab === "analytics" && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Payment Distribution</h3>
-                  <div className="space-y-3">
-                    {settlements.slice(0, 5).map((settlement) => (
-                      <div key={settlement.cause.id} className="flex justify-between items-center">
-                        <span className="text-gray-600 truncate max-w-xs">{settlement.cause.name}</span>
-                        <span className="font-medium text-gray-800">
-                          ${settlement.total_donations.toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Activity</h3>
-                  <div className="space-y-3">
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">System Status:</span> All payment systems operational
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Last Settlement:</span> {
-                        settlements.find(s => s.settlement.last_settlement_date)?.settlement.last_settlement_date 
-                          ? new Date(settlements.find(s => s.settlement.last_settlement_date).settlement.last_settlement_date).toLocaleDateString()
-                          : "No recent settlements"
-                      }
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Pending Causes:</span> {settlements.filter(s => s.settlement.pending_amount > 0).length} causes awaiting payment
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           )}
