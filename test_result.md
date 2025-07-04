@@ -672,6 +672,9 @@ test_plan:
       - working: true
         agent: "testing"
         comment: "Admin Settlements endpoint is now working correctly. The ObjectId serialization issue has been fixed by adding {'_id': 0} projection to the MongoDB queries. The endpoint now returns proper settlement data with cause information, including direct donations and business donations per cause. The response structure includes settlements and summary sections as expected."
+      - working: true
+        agent: "testing"
+        comment: "Verified the Admin Settlements endpoint is working correctly. Created a comprehensive test that checks all required fields are present and properly formatted. The endpoint returns settlement data for all causes, including direct donations and business donations. The data is consistent, with total_donations_received = pending_amount + total_settled for each settlement. The summary section correctly shows total_causes, total_raised, total_pending, and total_settled values that match the individual settlements."
 
   - task: "Create Cause Endpoint"
     implemented: true
